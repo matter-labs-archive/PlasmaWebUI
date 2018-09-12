@@ -1,0 +1,14 @@
+.logo {
+  height: 80px;
+}
+
+.logo-icon {
+  width: 72px;
+  height: 72px;
+  padding: 6px;
+  border-radius: 6px;
+}
+
+.container {
+  padding-top: 2rem;
+}
