@@ -32,8 +32,24 @@ class Transactions extends Component {
   loadTransactions(address) {
     let url = `${process.env.REACT_APP_API_URL_PREFIX}/utxos/${address}`;
     let self = this;
+
+    let payload = {
+      "for": `${address}`,
+      "blockNumber": 1, 
+      "transactionNumber": 0, 
+      "outputNumber": 0,
+      "limit": 50
+    };
     
-    fetch(url)
+    fetch(url, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        mode: 'no-cors',
+        body: JSON.stringify(payload)
+      })
       .then(  
         function (response) {  
           if (response.status !== 200) {  
@@ -71,7 +87,7 @@ class Transactions extends Component {
         </Row>
 
         {this.state.utxos.map(function (utxo) {
-          return <Container className="tx p-3">
+          return <Container className="tx p-3 shadow">
             <Row className="align-items-center">
               <Col><span className="lead">{utxo.value}</span></Col>
               <Col className="col-md-auto">
