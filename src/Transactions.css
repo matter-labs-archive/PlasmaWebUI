@@ -1,0 +1,9 @@
+.Transactions {
+	margin-bottom: 3.5rem;
+}
+
+.tx {
+	background-color: #eeeeee;
+	margin-top: 1rem;
+	border-radius: 6px;
+}
