@@ -42,29 +42,29 @@ class Transactions extends Component {
     };
     
     fetch(url, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        mode: 'no-cors',
-        body: JSON.stringify(payload)
-      })
-      .then(  
-        function (response) {  
-          if (response.status !== 200) {  
-            console.log('Responce status error:', response.status);  
-            return;  
-          }
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      mode: 'no-cors',
+      body: JSON.stringify(payload)
+    })
+    .then(  
+      function (response) {  
+        if (response.status !== 200) {  
+          console.log('Responce status error:', response.status);  
+          return;  
+        }
 
-          response.json().then(function (data) {  
-            self.setUtxos(data.utxos);
-          });
-        }  
-      )  
-      .catch(function (err) {  
-        console.log('Request error:', err);
-      });
+        response.json().then(function (data) {  
+          self.setUtxos(data.utxos);
+        });
+      }  
+    )  
+    .catch(function (err) {  
+      console.log('Request error:', err);
+    });
   }
 
   render() {
