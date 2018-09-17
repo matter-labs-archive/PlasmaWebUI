@@ -46,7 +46,7 @@ class App extends Component {
           </Alert>
           <Transactions />
           <History />
-          <footer className="pt-4 my-md-5 pt-md-5 border-top">
+          <footer className="pt-4 my-md-5 pt-md-5 border-top mx-3">
             <div className="row">
               <div className="col-12 col-md">
                 <img className="mb-2 bg-dark logo-icon" src={logo} alt="" />

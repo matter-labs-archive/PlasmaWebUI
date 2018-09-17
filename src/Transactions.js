@@ -9,7 +9,7 @@ class Transactions extends Component {
 
     this.state = {
       sortDropdownOpen: false,
-      utxos: [],
+      utxos: [{value: 1}, {value: 2}, {value: 3}],
     };
 
     this.toggleSort = this.toggleSort.bind(this);
