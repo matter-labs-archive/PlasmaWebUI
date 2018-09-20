@@ -9,7 +9,7 @@ class Transactions extends Component {
 
     this.state = {
       sortDropdownOpen: false,
-      utxos: [{value: 1}, {value: 2}, {value: 3}],
+      utxos: [],
     };
 
     this.toggleSort = this.toggleSort.bind(this);
@@ -30,7 +30,7 @@ class Transactions extends Component {
   }
 
   loadTransactions(address) {
-    let url = `${process.env.REACT_APP_API_URL_PREFIX}/utxos/${address}`;
+    let url = `${process.env.REACT_APP_API_URL_PREFIX}/listUTXOs`;
     let self = this;
 
     let payload = {
@@ -47,7 +47,7 @@ class Transactions extends Component {
         'Accept': 'application/json',
         'Content-Type': 'application/json'
       },
-      mode: 'no-cors',
+      mode: 'cors',
       body: JSON.stringify(payload)
     })
     .then(  
