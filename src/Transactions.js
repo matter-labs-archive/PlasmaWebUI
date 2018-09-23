@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { Container, Row, Col, Button, ButtonDropdown, DropdownToggle, DropdownMenu, DropdownItem } from 'reactstrap';
+import { Container, Row, Col, Button, ButtonDropdown, DropdownToggle, DropdownMenu, DropdownItem, Badge } from 'reactstrap';
 import './Transactions.css';
 
 class Transactions extends Component {
@@ -72,7 +72,7 @@ class Transactions extends Component {
       <div className="Transactions">
         <Row className="px-3">
           <Col>
-            <h2>Transactions</h2>
+            <h2>UTXOs</h2>
           </Col>
           <Col className="text-right">
             <ButtonDropdown isOpen={this.state.sortDropdownOpen} toggle={this.toggleSort}>
@@ -89,11 +89,12 @@ class Transactions extends Component {
         {this.state.utxos.map(function (utxo) {
           return <Container className="tx p-3 shadow">
             <Row className="align-items-center">
-              <Col><span className="lead">{utxo.value}</span></Col>
-              <Col className="col-md-auto">
-                <Button color="success" className="mr-1"><FontAwesomeIcon icon="arrow-right" /> Transfer</Button>
-                <Button color="info" className="mr-1"><FontAwesomeIcon icon="sitemap" rotation={90} /> Megre</Button>
-                <Button color="primary"><FontAwesomeIcon icon="sign-out-alt" /> Withdraw</Button>
+              <Col><Badge color="primary" className="mr-1">B {utxo.blockNumber}</Badge><Badge color="secondary" className="mr-1">T {utxo.transactionNumber}</Badge><Badge color="info" className="mr-3">O {utxo.outputNumber}</Badge></Col>
+              <Col className="lead"><span className="font-weight-bold">{utxo.value}</span>&nbsp;Wei</Col>
+              <Col className="col-auto">
+                <Button color="success" className="mr-2"><FontAwesomeIcon icon="arrow-right" /> <span class="d-none d-sm-inline">Transfer</span></Button>
+                <Button color="info" className="mr-2"><FontAwesomeIcon icon="sitemap" rotation={90} /> <span class="d-none d-md-inline">Megre</span></Button>
+                <Button color="primary"><FontAwesomeIcon icon="sign-out-alt" /> <span class="d-none d-md-inline">Withdraw</span></Button>
               </Col>
             </Row>
           </Container>

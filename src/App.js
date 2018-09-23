@@ -33,12 +33,12 @@ class App extends Component {
       <div className="App">
         <div className="d-flex flex-column flex-md-row align-items-center p-3 px-md-4 mb-3 bg-dark border-bottom shadow">
           <h5 className="my-0 mr-md-auto font-weight-normal"><a href="/"><img src={logo} className="logo" alt="logo" /></a></h5>
-          <Nav>
-            <span className="p-2 mr-3 text-light">Address: <strong>{process.env.REACT_APP_ETH_ADDRESS}</strong></span>
+          <Nav className="ml-md-3">
+            <span className="p-2 mr-3 text-light d-none d-md-inline-block text-truncate">Address: <strong>{process.env.REACT_APP_ETH_ADDRESS}</strong></span>
             <span className="p-2 mr-3 text-light">ETH Balance: <strong>0.00</strong> <FontAwesomeIcon icon={["fab", "ethereum"]} /></span>
             <span className="p-2 mr-4 text-light">Plasma Balance: <strong>0.00</strong> <FontAwesomeIcon icon={["fab", "ethereum"]} /></span>
-            <Button color="primary"><FontAwesomeIcon icon="sign-in-alt" /> Deposit in <FontAwesomeIcon icon={["fab", "ethereum"]} /></Button>
           </Nav>
+            <Button color="primary"><FontAwesomeIcon icon="sign-in-alt" /> Deposit in <FontAwesomeIcon icon={["fab", "ethereum"]} /></Button>
         </div>
         <Container>
           <Alert color="info" isOpen={this.state.metamaskInfoOpen} toggle={this.onDismissMetamaskInfo}>

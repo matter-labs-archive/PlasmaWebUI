@@ -49,7 +49,7 @@ class History extends Component {
           <Col>
             <h2>History</h2>
           </Col>
-          <Col className="text-center">
+          <Col className="text-center mt-1 mb-3 mt-sm-0 mb-sm-0">
             <ButtonGroup>
               <Button color="secondary" onClick={() => this.setFilter('deposits')} outline={this.state.filter !== 'deposits'}><FontAwesomeIcon icon="sign-in-alt" /> Deposits</Button>
               <Button color="secondary" onClick={() => this.setFilter('withdrawals')} outline={this.state.filter !== 'withdrawals'}><FontAwesomeIcon icon="sign-out-alt" /> Pending Withdrawals</Button>
@@ -71,7 +71,7 @@ class History extends Component {
           return <Container className="tx p-3">
             <Row className="align-items-center">
               <Col><span className="lead">{utxo.value}</span></Col>
-              <Col className="col-md-auto">
+              <Col className="col-auto">
                 <Button color="info"><FontAwesomeIcon icon="external-link-alt" /></Button>
               </Col>
             </Row>
