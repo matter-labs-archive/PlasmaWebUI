@@ -89,11 +89,11 @@ class Transactions extends Component {
         {this.state.utxos.map(function (utxo) {
           return <Container className="tx p-3 shadow">
             <Row className="align-items-center">
-              <Col><Badge color="primary" className="mr-1">B {utxo.blockNumber}</Badge><Badge color="secondary" className="mr-1">T {utxo.transactionNumber}</Badge><Badge color="info" className="mr-3">O {utxo.outputNumber}</Badge></Col>
+              <Col className="text-nowrap"><Badge color="primary" className="mr-1" title="Block number"><span className="d-none d-sm-inline">B </span>{utxo.blockNumber}</Badge><Badge color="secondary" className="mr-1" title="Transaction number"><span className="d-none d-sm-inline">T </span>{utxo.transactionNumber}</Badge><Badge color="info" className="mr-3" title="Output number"><span className="d-none d-sm-inline">O </span>{utxo.outputNumber}</Badge></Col>
               <Col className="lead"><span className="font-weight-bold">{utxo.value}</span>&nbsp;Wei</Col>
               <Col className="col-auto">
-                <Button color="success" className="mr-2"><FontAwesomeIcon icon="arrow-right" /> <span class="d-none d-sm-inline">Transfer</span></Button>
-                <Button color="info" className="mr-2"><FontAwesomeIcon icon="sitemap" rotation={90} /> <span class="d-none d-md-inline">Megre</span></Button>
+                <Button color="success" className="mr-2"><FontAwesomeIcon icon="arrow-right" /> <span className="d-none d-sm-inline">Transfer</span></Button>
+                <Button color="info" className="mr-2"><FontAwesomeIcon icon="sitemap" rotation={90} /> <span className="d-none d-md-inline">Megre</span></Button>
                 <Button color="primary"><FontAwesomeIcon icon="sign-out-alt" /> <span class="d-none d-md-inline">Withdraw</span></Button>
               </Col>
             </Row>

@@ -49,10 +49,10 @@ class History extends Component {
           <Col>
             <h2>History</h2>
           </Col>
-          <Col className="text-center mt-1 mb-3 mt-sm-0 mb-sm-0">
+          <Col className="text-center mt-1 mb-3 mt-md-0 mb-md-0">
             <ButtonGroup>
               <Button color="secondary" onClick={() => this.setFilter('deposits')} outline={this.state.filter !== 'deposits'}><FontAwesomeIcon icon="sign-in-alt" /> Deposits</Button>
-              <Button color="secondary" onClick={() => this.setFilter('withdrawals')} outline={this.state.filter !== 'withdrawals'}><FontAwesomeIcon icon="sign-out-alt" /> Pending Withdrawals</Button>
+              <Button color="secondary" onClick={() => this.setFilter('withdrawals')} outline={this.state.filter !== 'withdrawals'}><FontAwesomeIcon icon="sign-out-alt" /> <span className="d-none d-sm-inline">Pending </span>Withdrawals</Button>
             </ButtonGroup>
           </Col>
           <Col className="text-right">
