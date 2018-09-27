@@ -6,6 +6,7 @@ import { PlasmaTransaction, TxTypeSplit } from './plasma-tx-js/Tx/RLPtx';
 import { TransactionInput } from './plasma-tx-js/Tx/RLPinput';
 import { TransactionOutput } from './plasma-tx-js/Tx/RLPoutput';
 import { BN } from 'bn.js';
+import * as ethUtil from 'ethereumjs-util';
 import './Transactions.css';
 
 class Transactions extends Component {
@@ -105,13 +106,16 @@ class Transactions extends Component {
 
     console.log(plasmaTransaction);
 
-    // const tx: any = new PlasmaTransactionWithSignature({
-    //   transaction: plasmaTransaction
-    // });
+    const tx = new PlasmaTransactionWithSignature({
+      transaction: plasmaTransaction
+    });
 
-    // const serialized = tx.transaction.serialize();
+    console.log(tx);
 
-    // const txHex = ethUtil.bufferToHex(serialized);
+    const serialized = tx.transaction.serialize();
+    const txHex = ethUtil.bufferToHex(serialized);
+
+    console.log(txHex);
 
     // [err, signingResult] = await to(this.$connection.web3.eth.personal.sign(txHex, this.$connection.getAccount()));
 
