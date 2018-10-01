@@ -19,8 +19,10 @@ class Transactions extends Component {
     };
 
     this.toggleSort = this.toggleSort.bind(this);
+  }
 
-    this.loadTransactions(process.env.REACT_APP_ETH_ADDRESS);
+  componentDidUpdate(prevProps) {
+    this.loadTransactions(this.props.account);
   }
 
   toggleSort() {
@@ -36,8 +38,8 @@ class Transactions extends Component {
   }
 
   loadTransactions(address) {
-    let url = `${process.env.REACT_APP_API_URL_PREFIX}/listUTXOs`;
     let self = this;
+    let url = `${process.env.REACT_APP_API_URL_PREFIX}/listUTXOs`;
 
     let payload = {
       "for": `${address}`,
@@ -137,6 +139,8 @@ class Transactions extends Component {
     //   this.$error.addError(err.message.slice(0, 50), 'sendRawRLPTX');
     //   return  Promise.reject(err);
     // }
+
+    // web3js.eth.personal.sign(plasmaTxHash, account, function (sigError, sigRes) {
   }
 
   render() {
