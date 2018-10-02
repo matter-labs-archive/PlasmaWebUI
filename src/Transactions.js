@@ -17,13 +17,14 @@ class Transactions extends Component {
       sortDropdownOpen: false,
       transferModalOpen: false,
       transferAddressTo: '',
-      transferAmount: 0.0,
+      transferAmount: '',
       utxos: [],
     };
 
     this.toggleSort = this.toggleSort.bind(this);
     this.toggleTransferModal = this.toggleTransferModal.bind(this);
-    this.handleChange = this.handleChange.bind(this);
+    this.handleAddressChange = this.handleAddressChange.bind(this);
+    this.handleAmountChange = this.handleAmountChange.bind(this);
     this.onTransferSubmit = this.onTransferSubmit.bind(this);
   }
 
@@ -50,8 +51,12 @@ class Transactions extends Component {
     this.setState({ transferModalOpen: !this.state.transferModalOpen });
   }
 
-  handleChange(event) {
+  handleAddressChange(event) {
     this.setState({transferAddressTo: event.target.value});
+  }
+
+  handleAmountChange(event) {
+    this.setState({transferAmount: event.target.value});
   }
 
   onTransferSubmit(event) {
@@ -213,13 +218,13 @@ class Transactions extends Component {
               <FormGroup row>
                 <Label for="addressTo" sm={2}>Address</Label>
                 <Col sm={10}>
-                  <Input type="text" name="addressTo" id="addressTo" placeholder="0x0000000000000000000000000000000000000000" value={this.state.transferAddressTo} onChange={this.handleChange} />
+                  <Input type="text" name="addressTo" id="addressTo" placeholder="0x0000000000000000000000000000000000000000" value={this.state.transferAddressTo} onChange={this.handleAddressChange} />
                 </Col>
               </FormGroup>
               <FormGroup row>
                 <Label for="amount" sm={2}>Amount</Label>
                 <Col sm={10}>
-                  <Input type="text" name="amount" id="amount" placeholder="0.0" />
+                  <Input type="text" name="amount" id="amount" placeholder="0.0" value={this.state.transferAmount} onChange={this.handleAmountChange} />
                 </Col>
               </FormGroup>
             </ModalBody>

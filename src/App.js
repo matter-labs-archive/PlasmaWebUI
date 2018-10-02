@@ -3,8 +3,9 @@ import { library } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faSignInAlt, faSignOutAlt, faSortAmountDown, faSitemap, faArrowRight, faExternalLinkAlt } from '@fortawesome/free-solid-svg-icons'
 import { faEthereum } from '@fortawesome/free-brands-svg-icons'
-import { Container, Nav, Alert, Button } from 'reactstrap';
+import { Container, Nav, Alert, Button, Col, Modal, ModalHeader, ModalBody, ModalFooter, Form, FormGroup, Label, Input } from 'reactstrap';
 import Web3 from 'web3';
+import { BN } from 'bn.js';
 import Transactions from './Transactions';
 import History from './History';
 import logo from './logo.svg';
@@ -21,11 +22,16 @@ class App extends Component {
       ethBalance: '0',
       plasmaBalance: '0',
       metamaskWarningOpen: false,
+      depositModalOpen: false,
+      depositAmount: '',
       web3js: new Web3(window.web3.currentProvider),
     };
 
     this.onDismissMetamaskInfo = this.onDismissMetamaskInfo.bind(this);
     this.onPlasmaBalanceChanged = this.onPlasmaBalanceChanged.bind(this);
+    this.toggleDepositModal = this.toggleDepositModal.bind(this);
+    this.handleAmountChange = this.handleAmountChange.bind(this);
+    this.onDepositSubmit = this.onDepositSubmit.bind(this);
 
     this.state.web3js.eth.net.getNetworkType().then((networkName) => {
       if (networkName !== 'rinkeby') {
@@ -37,18 +43,59 @@ class App extends Component {
         this.setMetaMaskAccount();
       }
     });
+
+    let contractAddress = process.env.REACT_APP_CONTRACT_ADDRESS;
+    let contractAbi = JSON.parse(process.env.REACT_APP_CONTRACT_ABI);
+
+    this.state.contract = new this.state.web3js.eth.Contract(contractAbi, contractAddress, { gas: 500000 });
   }
 
   formatPrice(weiPriceString) {
-    return this.state.web3js.utils.fromWei(weiPriceString);
+    return parseFloat(this.state.web3js.utils.fromWei(weiPriceString)).toFixed(3);
   }
 
   setMetaMaskAccount() {
+    let self = this;
+
     this.state.web3js.eth.getAccounts().then((accounts) => {
-      if (this.state.account !== accounts[0]) {
-        this.setState({ account: accounts[0]});
+      let account = accounts[0];
+
+      if (this.state.account !== account) {
+        let contract = this.state.contract;
+        contract.options.from = account;
+        this.state.web3js.eth.getBalance(account, function (error, balance) {
+          if (!error) {
+            self.setState({ account: accounts[0], contract: contract, ethBalance: balance });
+          }
+        });
       }
     });
+  }
+
+  toggleDepositModal() {
+    this.setState({ depositModalOpen: !this.state.depositModalOpen });
+  }
+
+  handleAmountChange(event) {
+    this.setState({ depositAmount: event.target.value});
+  }
+
+  onDepositSubmit(event) {
+    event.preventDefault();
+
+    let self = this;
+    let amount = parseFloat(this.state.depositAmount);
+
+    if (amount > 0) {
+      let weiAmount = this.state.web3js.utils.toWei(new BN(amount * 1000), 'finney');
+      
+      console.log('Depositing...');
+
+      this.state.contract.methods.deposit().send({ value: weiAmount }).on('transactionHash', function (hash){
+        self.setState({ depositModalOpen: false });
+        console.log(`https://rinkeby.etherscan.io/tx/${hash}`);
+      });
+    }
   }
 
   onDismissMetamaskInfo() {
@@ -69,9 +116,26 @@ class App extends Component {
             <span className="p-2 mr-3 text-light">ETH Balance: <strong>{this.formatPrice(this.state.ethBalance)}</strong> <FontAwesomeIcon icon={["fab", "ethereum"]} /></span>
             <span className="p-2 mr-4 text-light">Plasma Balance: <strong>{this.formatPrice(this.state.plasmaBalance)}</strong> <FontAwesomeIcon icon={["fab", "ethereum"]} /></span>
           </Nav>
-            <Button color="primary"><FontAwesomeIcon icon="sign-in-alt" /> Deposit in <FontAwesomeIcon icon={["fab", "ethereum"]} /></Button>
+            <Button color="primary" onClick={this.toggleDepositModal}><FontAwesomeIcon icon="sign-in-alt" /> Deposit in <FontAwesomeIcon icon={["fab", "ethereum"]} /></Button>
         </div>
         <Container>
+          <Modal isOpen={this.state.depositModalOpen} toggle={this.toggleDepositModal}>
+            <Form onSubmit={this.onDepositSubmit}>
+              <ModalHeader toggle={this.toggleDepositModal}>Deposit</ModalHeader>
+              <ModalBody>
+                <FormGroup row>
+                  <Label for="amount" sm={2}>Amount</Label>
+                  <Col sm={10}>
+                    <Input type="text" name="amount" id="amount" placeholder="0.0" value={this.state.depositAmount} onChange={this.handleAmountChange} />
+                  </Col>
+                </FormGroup>
+              </ModalBody>
+              <ModalFooter>
+                <Button color="success" type="submit" className="mr-2"><FontAwesomeIcon icon="arrow-right" /> <span className="d-none d-sm-inline">Transfer</span></Button>
+                <Button color="secondary" onClick={this.toggleDepositModal}>Cancel</Button>
+              </ModalFooter>
+            </Form>
+          </Modal>
           <Alert color="info" isOpen={this.state.metamaskWarningOpen} toggle={this.onDismissMetamaskInfo}>
             Please enable MetaMask extension and select Rinkeby test network
           </Alert>
