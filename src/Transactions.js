@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { Container, Row, Col, Button, ButtonDropdown, DropdownToggle, DropdownMenu, DropdownItem, Badge } from 'reactstrap';
+import { Container, Row, Col, Button, ButtonDropdown, DropdownToggle, DropdownMenu, DropdownItem, Badge, Modal, ModalHeader, ModalBody, ModalFooter, Form, FormGroup, Label, Input } from 'reactstrap';
 import { PlasmaTransactionWithSignature } from './plasma-tx-js/Tx/RLPtxWithSignature';
 import { PlasmaTransaction, TxTypeSplit } from './plasma-tx-js/Tx/RLPtx';
 import { TransactionInput } from './plasma-tx-js/Tx/RLPinput';
@@ -15,26 +15,50 @@ class Transactions extends Component {
 
     this.state = {
       sortDropdownOpen: false,
+      transferModalOpen: false,
+      transferAddressTo: '',
+      transferAmount: 0.0,
       utxos: [],
     };
 
     this.toggleSort = this.toggleSort.bind(this);
+    this.toggleTransferModal = this.toggleTransferModal.bind(this);
+    this.handleChange = this.handleChange.bind(this);
+    this.onTransferSubmit = this.onTransferSubmit.bind(this);
   }
 
   componentDidUpdate(prevProps) {
-    this.loadTransactions(this.props.account);
+    if (this.props.account !== prevProps.account) {
+      this.loadTransactions(this.props.account);
+    }
+  }
+
+  formatPrice(weiPriceString) {
+    let price = this.props.web3js.utils.fromWei(weiPriceString);
+    if (price >= '0.0001') {
+      return `${price} ETH`;
+    } else {
+      return `${weiPriceString} Wei`
+    }
   }
 
   toggleSort() {
-    let state = this.state;
-    state.sortDropdownOpen = !state.sortDropdownOpen;
-    this.setState(state);
+    this.setState({ sortDropdownOpen: !this.state.sortDropdownOpen });
   }
 
-  setUtxos(utxos) {
-    let state = this.state;
-    state.utxos = utxos;
-    this.setState(state)
+  toggleTransferModal() {
+    this.setState({ transferModalOpen: !this.state.transferModalOpen });
+  }
+
+  handleChange(event) {
+    this.setState({transferAddressTo: event.target.value});
+  }
+
+  onTransferSubmit(event) {
+    event.preventDefault();
+
+    this.setState({ transferModalOpen: false });
+    console.log(this.state.transferAddressTo);
   }
 
   loadTransactions(address) {
@@ -66,7 +90,15 @@ class Transactions extends Component {
         }
 
         response.json().then(function (data) {  
-          self.setUtxos(data.utxos);
+          self.setState({ utxos: data.utxos });
+
+          let balance = new BN();
+
+          data.utxos.map(function (utxo) {
+            balance.iadd(new BN(utxo.value));
+          });
+
+          self.props.onBalanceChanged(balance.toString());
         });
       }  
     )  
@@ -161,20 +193,42 @@ class Transactions extends Component {
             </ButtonDropdown>
           </Col>
         </Row>
-
         {this.state.utxos.map(function (utxo) {
           return <Container className="tx p-3 shadow">
             <Row className="align-items-center">
               <Col className="text-nowrap"><Badge color="primary" className="mr-1" title="Block number"><span className="d-none d-sm-inline">B </span>{utxo.blockNumber}</Badge><Badge color="secondary" className="mr-1" title="Transaction number"><span className="d-none d-sm-inline">T </span>{utxo.transactionNumber}</Badge><Badge color="info" className="mr-3" title="Output number"><span className="d-none d-sm-inline">O </span>{utxo.outputNumber}</Badge></Col>
-              <Col className="lead"><span className="font-weight-bold">{utxo.value}</span>&nbsp;Wei</Col>
+              <Col className="lead"><span className="font-weight-bold">{this.formatPrice(utxo.value)}</span></Col>
               <Col className="col-auto">
-                <Button color="success" className="mr-2" onClick={() => this.transfer(utxo)}><FontAwesomeIcon icon="arrow-right" /> <span className="d-none d-sm-inline">Transfer</span></Button>
+                <Button color="success" className="mr-2" onClick={this.toggleTransferModal}><FontAwesomeIcon icon="arrow-right" /> <span className="d-none d-sm-inline">Transfer</span></Button>
                 <Button color="info" className="mr-2"><FontAwesomeIcon icon="sitemap" rotation={90} /> <span className="d-none d-md-inline">Megre</span></Button>
                 <Button color="primary"><FontAwesomeIcon icon="sign-out-alt" /> <span className="d-none d-md-inline">Withdraw</span></Button>
               </Col>
             </Row>
           </Container>
         }, this)}
+        <Modal isOpen={this.state.transferModalOpen} toggle={this.toggleTransferModal}>
+          <Form onSubmit={this.onTransferSubmit}>
+            <ModalHeader toggle={this.toggleTransferModal}>Transfer</ModalHeader>
+            <ModalBody>
+              <FormGroup row>
+                <Label for="addressTo" sm={2}>Address</Label>
+                <Col sm={10}>
+                  <Input type="text" name="addressTo" id="addressTo" placeholder="0x0000000000000000000000000000000000000000" value={this.state.transferAddressTo} onChange={this.handleChange} />
+                </Col>
+              </FormGroup>
+              <FormGroup row>
+                <Label for="amount" sm={2}>Amount</Label>
+                <Col sm={10}>
+                  <Input type="text" name="amount" id="amount" placeholder="0.0" />
+                </Col>
+              </FormGroup>
+            </ModalBody>
+            <ModalFooter>
+              <Button color="success" type="submit" className="mr-2"><FontAwesomeIcon icon="arrow-right" /> <span className="d-none d-sm-inline">Transfer</span></Button>
+              <Button color="secondary" onClick={this.toggleTransferModal}>Cancel</Button>
+            </ModalFooter>
+          </Form>
+        </Modal>
       </div>
     );
   }

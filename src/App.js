@@ -18,18 +18,18 @@ class App extends Component {
 
     this.state = {
       account: '',
-      metamaskInfoOpen: false,
+      ethBalance: '0',
+      plasmaBalance: '0',
+      metamaskWarningOpen: false,
+      web3js: new Web3(window.web3.currentProvider),
     };
 
     this.onDismissMetamaskInfo = this.onDismissMetamaskInfo.bind(this);
+    this.onPlasmaBalanceChanged = this.onPlasmaBalanceChanged.bind(this);
 
-    this.web3js = new Web3(window.web3.currentProvider);
-
-    this.web3js.eth.net.getNetworkType().then((networkName) => {
+    this.state.web3js.eth.net.getNetworkType().then((networkName) => {
       if (networkName !== 'rinkeby') {
-        let state = this.state;
-        state.metamaskInfoOpen = true;
-        this.setState(state);
+        this.setState({ metamaskWarningOpen: true });
       } else {
         window.web3.currentProvider.publicConfigStore.on('update', () => {
           this.setMetaMaskAccount();
@@ -39,20 +39,24 @@ class App extends Component {
     });
   }
 
+  formatPrice(weiPriceString) {
+    return this.state.web3js.utils.fromWei(weiPriceString);
+  }
+
   setMetaMaskAccount() {
-    this.web3js.eth.getAccounts().then((accounts) => {
+    this.state.web3js.eth.getAccounts().then((accounts) => {
       if (this.state.account !== accounts[0]) {
-        let state = this.state;
-        state.account = accounts[0];
-        this.setState(state);
+        this.setState({ account: accounts[0]});
       }
     });
   }
 
   onDismissMetamaskInfo() {
-    let state = this.state;
-    state.metamaskInfoOpen = false;
-    this.setState(state);
+    this.setState({ metamaskWarningOpen: false });
+  }
+
+  onPlasmaBalanceChanged(plasmaBalance) {
+    this.setState({ plasmaBalance: plasmaBalance });
   }
 
   render() {
@@ -62,16 +66,16 @@ class App extends Component {
           <h5 className="my-0 mr-md-auto font-weight-normal"><a href="/"><img src={logo} className="logo" alt="logo" /></a></h5>
           <Nav className="ml-md-3">
             <span className="p-2 mr-3 text-light d-none d-md-inline-block text-truncate">Address: <strong>{this.state.account}</strong></span>
-            <span className="p-2 mr-3 text-light">ETH Balance: <strong>0.00</strong> <FontAwesomeIcon icon={["fab", "ethereum"]} /></span>
-            <span className="p-2 mr-4 text-light">Plasma Balance: <strong>0.00</strong> <FontAwesomeIcon icon={["fab", "ethereum"]} /></span>
+            <span className="p-2 mr-3 text-light">ETH Balance: <strong>{this.formatPrice(this.state.ethBalance)}</strong> <FontAwesomeIcon icon={["fab", "ethereum"]} /></span>
+            <span className="p-2 mr-4 text-light">Plasma Balance: <strong>{this.formatPrice(this.state.plasmaBalance)}</strong> <FontAwesomeIcon icon={["fab", "ethereum"]} /></span>
           </Nav>
             <Button color="primary"><FontAwesomeIcon icon="sign-in-alt" /> Deposit in <FontAwesomeIcon icon={["fab", "ethereum"]} /></Button>
         </div>
         <Container>
-          <Alert color="info" isOpen={this.state.metamaskInfoOpen} toggle={this.onDismissMetamaskInfo}>
+          <Alert color="info" isOpen={this.state.metamaskWarningOpen} toggle={this.onDismissMetamaskInfo}>
             Please enable MetaMask extension and select Rinkeby test network
           </Alert>
-          <Transactions account={this.state.account} />
+          <Transactions web3js={this.state.web3js} account={this.state.account} onBalanceChanged={this.onPlasmaBalanceChanged} />
           <History />
           <footer className="pt-4 my-md-5 pt-md-5 border-top mx-3">
             <div className="row">
