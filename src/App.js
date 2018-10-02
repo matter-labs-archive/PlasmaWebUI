@@ -87,7 +87,7 @@ class App extends Component {
     let amount = parseFloat(this.state.depositAmount);
 
     if (amount > 0) {
-      let weiAmount = this.state.web3js.utils.toWei(new BN(Math.floor(amount * 1000).toString()), 'finney');
+      let weiAmount = this.state.web3js.utils.toWei((Math.floor(amount * 1000)).toString(), 'finney');
       
       console.log('Depositing...');
 
