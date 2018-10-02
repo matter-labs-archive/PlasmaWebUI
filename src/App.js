@@ -60,7 +60,7 @@ class App extends Component {
     this.state.web3js.eth.getAccounts().then((accounts) => {
       let account = accounts[0];
 
-      if (this.state.account !== account) {
+      if (account && this.state.account !== account) {
         let contract = this.state.contract;
         contract.options.from = account;
         this.state.web3js.eth.getBalance(account, function (error, balance) {
