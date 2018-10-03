@@ -47,8 +47,17 @@ class Transactions extends Component {
     this.setState({ sortDropdownOpen: !this.state.sortDropdownOpen });
   }
 
-  toggleTransferModal() {
+  toggleTransferModal(utxo) {
     this.setState({ transferModalOpen: !this.state.transferModalOpen });
+  }
+
+  openTransferModal(utxo) {
+    this.setState({
+      transferModalOpen: true,
+      transferUTXO: utxo,
+      transferAddressTo: '',
+      transferAmount: '',
+    });
   }
 
   handleAddressChange(event) {
@@ -62,8 +71,19 @@ class Transactions extends Component {
   onTransferSubmit(event) {
     event.preventDefault();
 
-    this.setState({ transferModalOpen: false });
-    console.log(this.state.transferAddressTo);
+    let self = this;
+    let amount = parseFloat(this.state.transferAmount);
+
+    if (amount > 0) {
+      let weiAmount = this.props.web3js.utils.toWei((Math.floor(amount * 1000)).toString(), 'finney');
+
+      this.transfer(this.state.transferUTXO, this.props.account, this.state.transferAddressTo, weiAmount).then(() => {
+        self.setState({ transferModalOpen: false });
+        console.log('Success!');
+      }).catch(error => {
+        console.log('Error:', error);
+      });
+    }
   }
 
   loadTransactions(address) {
@@ -112,72 +132,110 @@ class Transactions extends Component {
     });
   }
 
-  transfer(utxo) {
-    let err, signingResult, txResult;
+  transfer(utxo, addressFrom, addressTo, weiAmount) {
+    let self = this;
 
-    const allInputs = [];
-    const allOutputs = [];
+    return new Promise(function (resolve, reject) {
+      console.log('Transferring...');
 
-    const inp = new TransactionInput({
-      blockNumber: (new BN(utxo.blockNumber)).toArrayLike(Buffer, 'be', 4),
-      txNumberInBlock: (new BN(utxo.txNumber)).toArrayLike(Buffer, 'be', 4),
-      outputNumberInTransaction: (new BN(utxo.outputNumber)).toArrayLike(Buffer, 'be', 1),
-      amountBuffer: (new BN(utxo.amount)).toArrayLike(Buffer, 'be', 32)
+      let allInputs = [];
+      let allOutputs = [];
+
+      const inp = new TransactionInput({
+        blockNumber: (new BN(utxo.blockNumber)).toArrayLike(Buffer, 'be', 4),
+        txNumberInBlock: (new BN(utxo.transactionNumber)).toArrayLike(Buffer, 'be', 4),
+        outputNumberInTransaction: (new BN(utxo.outputNumber)).toArrayLike(Buffer, 'be', 1),
+        amountBuffer: (new BN(utxo.value)).toArrayLike(Buffer, 'be', 32)
+      });
+      allInputs.push(inp);
+
+      weiAmount = new BN(weiAmount);
+
+      let zero = new BN();
+      let changeWeiAmount = new BN(utxo.value);
+      changeWeiAmount.isub(weiAmount);
+
+      let outputs = [{ to: addressTo, amount: weiAmount.toString() }];
+
+      if (changeWeiAmount.gt(zero)) {
+        outputs.push({ to: addressFrom, amount: changeWeiAmount.toString() });
+      }
+
+      if (changeWeiAmount.lt(zero)) {
+        reject('Insufficient funds');
+      }
+
+      if (!ethUtil.isValidAddress(addressTo)) {
+        reject('Invalid address');
+      }
+
+      let outputCounter = 0;
+      for (const output of outputs) {
+        const out = new TransactionOutput({
+          outputNumberInTransaction: (new BN(outputCounter)).toArrayLike(Buffer, 'be', 1),
+          amountBuffer: (new BN(output.amount)).toArrayLike(Buffer, 'be', 32),
+          to: ethUtil.toBuffer(output.to)
+        });
+        allOutputs.push(out);
+        outputCounter++;
+      }
+      
+      const plasmaTransaction = new PlasmaTransaction({
+        transactionType: (new BN(TxTypeSplit)).toArrayLike(Buffer, 'be', 1),
+        inputs: allInputs,
+        outputs: allOutputs
+      });
+
+      const tx = new PlasmaTransactionWithSignature({
+        transaction: plasmaTransaction
+      });
+
+      const serialized = tx.transaction.serialize();
+      const txHex = ethUtil.bufferToHex(serialized);
+
+      self.props.web3js.eth.personal.sign(txHex, addressFrom).then((sigRes) => {
+        console.log(sigRes);
+
+        tx.serializeSignature(sigRes);
+        const fullTX = ethUtil.bufferToHex(tx.serialize());
+
+        let url = `${process.env.REACT_APP_API_URL_PREFIX}/sendRawTX`;
+        
+        let payload = {
+          tx: fullTX,
+        }
+
+        fetch(url, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          mode: 'cors',
+          body: JSON.stringify(payload)
+        })
+        .then(  
+          function (response) {  
+            if (response.status !== 200) {  
+              reject('Responce status error');  
+            }
+
+            response.json().then(function (data) {
+              if (data.error) {
+                reject(data.reason);
+              } else {
+                resolve();
+              }
+            });
+          }  
+        )  
+        .catch(function (err) {  
+          reject(err);
+        });
+      }).catch(err => {
+        reject(err);
+      });
     });
-    allInputs.push(inp);
-
-    // let outputCounter = 0;
-    // for (const output of requestData.outputs) {
-    //   const out = new TransactionOutput({
-    //     outputNumberInTransaction: (new BN(outputCounter)).toArrayLike(Buffer, 'be', 1),
-    //     amountBuffer: (new BN(output.amount)).toArrayLike(Buffer, 'be', 32),
-    //     to: ethUtil.toBuffer(output.to)
-    //   });
-    //   allOutputs.push(out);
-    //   outputCounter++;
-    // }
-
-    const plasmaTransaction = new PlasmaTransaction({
-      transactionType: (new BN(TxTypeSplit)).toArrayLike(Buffer, 'be', 1),
-      inputs: allInputs,
-      outputs: allOutputs
-    });
-
-    console.log(plasmaTransaction);
-
-    const tx = new PlasmaTransactionWithSignature({
-      transaction: plasmaTransaction
-    });
-
-    console.log(tx);
-
-    const serialized = tx.transaction.serialize();
-    const txHex = ethUtil.bufferToHex(serialized);
-
-    console.log(txHex);
-
-    // [err, signingResult] = await to(this.$connection.web3.eth.personal.sign(txHex, this.$connection.getAccount()));
-
-    // if (err) {
-    //   if (err.message.indexOf('User denied') < 0) {
-    //     this.$error.addError(err.message.slice(0, 50), 'Transaction signing error');
-    //   }
-    //   return  Promise.reject(err);
-    // }
-
-    // this.$events.transferSubmited(true);
-
-    // tx.serializeSignature(signingResult);
-    // const fullTX = ethUtil.bufferToHex(tx.serialize());
-
-    // [err, txResult] = await to(this.$api.sendRawRLPTX(fullTX));
-
-    // if (err) {
-    //   this.$error.addError(err.message.slice(0, 50), 'sendRawRLPTX');
-    //   return  Promise.reject(err);
-    // }
-
-    // web3js.eth.personal.sign(plasmaTxHash, account, function (sigError, sigRes) {
   }
 
   render() {
@@ -204,9 +262,9 @@ class Transactions extends Component {
               <Col className="text-nowrap"><Badge color="primary" className="mr-1" title="Block number"><span className="d-none d-sm-inline">B </span>{utxo.blockNumber}</Badge><Badge color="secondary" className="mr-1" title="Transaction number"><span className="d-none d-sm-inline">T </span>{utxo.transactionNumber}</Badge><Badge color="info" className="mr-3" title="Output number"><span className="d-none d-sm-inline">O </span>{utxo.outputNumber}</Badge></Col>
               <Col className="lead"><span className="font-weight-bold">{this.formatPrice(utxo.value)}</span></Col>
               <Col className="col-auto">
-                <Button color="success" className="mr-2" onClick={this.toggleTransferModal}><FontAwesomeIcon icon="arrow-right" /> <span className="d-none d-sm-inline">Transfer</span></Button>
-                <Button color="info" className="mr-2"><FontAwesomeIcon icon="sitemap" rotation={90} /> <span className="d-none d-md-inline">Megre</span></Button>
-                <Button color="primary"><FontAwesomeIcon icon="sign-out-alt" /> <span className="d-none d-md-inline">Withdraw</span></Button>
+                <Button color="success" className="mr-0" onClick={() => this.openTransferModal(utxo)} title="Transfer"><FontAwesomeIcon icon="arrow-right" /> <span className="d-none d-sm-inline">Transfer</span></Button>
+                <Button hidden={true} color="info" className="mr-2" title="Merge"><FontAwesomeIcon icon="sitemap" rotation={90} /> <span className="d-none d-md-inline">Merge</span></Button>
+                <Button hidden={true} color="primary" title="Withdraw"><FontAwesomeIcon icon="sign-out-alt" /> <span className="d-none d-md-inline">Withdraw</span></Button>
               </Col>
             </Row>
           </Container>

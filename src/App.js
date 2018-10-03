@@ -166,7 +166,7 @@ class App extends Component {
             <div className="row">
               <div className="col-12 col-md">
                 <img className="mb-2 bg-dark logo-icon" src={logo} alt="" />
-                <small className="d-block mb-3 text-muted">&copy;&nbsp;2018</small>
+                <small className="d-block mb-3 text-muted">&copy;&nbsp;Matter&nbsp;Inc.&nbsp;2018</small>
               </div>
               <div className="col-6 col-md">
                 <h5>Features</h5>
