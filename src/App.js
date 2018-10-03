@@ -17,6 +17,18 @@ class App extends Component {
   constructor(props) {
     super(props);
 
+    if (!window.web3) {
+      this.state = {
+        account: '',
+        ethBalance: '0',
+        plasmaBalance: '0',
+        metamaskWarningOpen: true,
+        depositModalOpen: false,
+      };
+
+      return;
+    }
+
     this.state = {
       account: '',
       ethBalance: '0',
@@ -51,13 +63,22 @@ class App extends Component {
   }
 
   formatPrice(weiPriceString) {
-    return parseFloat(this.state.web3js.utils.fromWei(weiPriceString)).toFixed(3);
+    if (this.state.web3js) {
+      return parseFloat(this.state.web3js.utils.fromWei(weiPriceString)).toFixed(3);
+    } else {
+      return '0';
+    }
   }
 
   setMetaMaskAccount() {
     let self = this;
 
     this.state.web3js.eth.getAccounts().then((accounts) => {
+      if (accounts.length === 0) {
+        this.setState({ metamaskWarningOpen: true });
+        return;
+      }
+
       let account = accounts[0];
 
       if (account && this.state.account !== account) {
@@ -116,7 +137,7 @@ class App extends Component {
             <span className="p-2 mr-3 text-light">ETH Balance: <strong>{this.formatPrice(this.state.ethBalance)}</strong> <FontAwesomeIcon icon={["fab", "ethereum"]} /></span>
             <span className="p-2 mr-4 text-light">Plasma Balance: <strong>{this.formatPrice(this.state.plasmaBalance)}</strong> <FontAwesomeIcon icon={["fab", "ethereum"]} /></span>
           </Nav>
-            <Button color="primary" onClick={this.toggleDepositModal}><FontAwesomeIcon icon="sign-in-alt" /> Deposit in <FontAwesomeIcon icon={["fab", "ethereum"]} /></Button>
+          <Button color="primary" onClick={this.toggleDepositModal}><FontAwesomeIcon icon="sign-in-alt" /> Deposit in <FontAwesomeIcon icon={["fab", "ethereum"]} /></Button>
         </div>
         <Container>
           <Modal isOpen={this.state.depositModalOpen} toggle={this.toggleDepositModal}>
@@ -137,7 +158,7 @@ class App extends Component {
             </Form>
           </Modal>
           <Alert color="info" isOpen={this.state.metamaskWarningOpen} toggle={this.onDismissMetamaskInfo}>
-            Please enable MetaMask extension and select Rinkeby test network
+            Please unlock MetaMask account and select Rinkeby test network
           </Alert>
           <Transactions web3js={this.state.web3js} account={this.state.account} onBalanceChanged={this.onPlasmaBalanceChanged} />
           <History />
