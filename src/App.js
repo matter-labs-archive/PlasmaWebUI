@@ -112,7 +112,7 @@ class App extends Component {
       
       console.log('Depositing...');
 
-      this.state.contract.methods.deposit().send({ value: weiAmount }).on('transactionHash', function (hash){
+      this.state.contract.methods.deposit().send({ value: weiAmount }).on('transactionHash', function (hash) {
         self.setState({ depositModalOpen: false });
         console.log(`https://rinkeby.etherscan.io/tx/${hash}`);
       });
@@ -161,7 +161,7 @@ class App extends Component {
             Please unlock MetaMask account and select Rinkeby test network
           </Alert>
           <Transactions web3js={this.state.web3js} account={this.state.account} onBalanceChanged={this.onPlasmaBalanceChanged} />
-          <History />
+          <History web3js={this.state.web3js} contract={this.state.contract} account={this.state.account} />
           <footer className="pt-4 my-md-5 pt-md-5 border-top mx-3">
             <div className="row">
               <div className="col-12 col-md">

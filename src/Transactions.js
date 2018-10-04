@@ -251,7 +251,8 @@ class Transactions extends Component {
                 <FontAwesomeIcon icon="sort-amount-down" /> Sort By
               </DropdownToggle>
               <DropdownMenu>
-                <DropdownItem>Date Added</DropdownItem>
+                <DropdownItem>Block Number</DropdownItem>
+                <DropdownItem>Amount</DropdownItem>
               </DropdownMenu>
             </ButtonDropdown>
           </Col>

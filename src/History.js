@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Container, Row, Col, Button, ButtonGroup, ButtonDropdown, DropdownToggle, DropdownMenu, DropdownItem } from 'reactstrap';
+import { BN } from 'bn.js';
 import './History.css';
 
 class History extends Component {
@@ -10,36 +11,57 @@ class History extends Component {
     this.state = {
       filter: 'deposits',
       sortDropdownOpen: false,
-      utxos: [],
+      deposits: [],
+      withdrawals: [],
     };
 
     this.setFilter = this.setFilter.bind(this);
     this.toggleSort = this.toggleSort.bind(this);
+  }
 
-    this.loadHistory(process.env.REACT_APP_ETH_ADDRESS);
+  componentDidUpdate(prevProps) {
+    if (this.props.account !== prevProps.account) {
+      if (this.state.filter === 'deposits') {
+        this.loadDeposits(this.props.account);
+      }
+    }
+  }
+
+  formatPrice(weiPriceString) {
+    let price = this.props.web3js.utils.fromWei(weiPriceString);
+    if (price >= '0.0001') {
+      return `${price} ETH`;
+    } else {
+      return `${weiPriceString} Wei`
+    }
   }
 
   setFilter(filter) {
     if (this.state.filter !== filter) {
-      let state = this.state;
-      state.filter = filter;
-      this.setState(state);
+      this.setState({ filter: filter });
     }
   }
 
   toggleSort() {
-    let state = this.state;
-    state.sortDropdownOpen = !state.sortDropdownOpen;
-    this.setState(state);
+    this.setState({ sortDropdownOpen: !this.state.sortDropdownOpen });
   }
 
-  setUtxos(utxos) {
-    let state = this.state;
-    state.utxos = utxos;
-    this.setState(state)
-  }
+  async loadDeposits(address) {
+    let records = [];
 
-  loadHistory(address) {
+    try {
+      for (let index = 0; ; index++) {
+        let record = await this.props.contract.methods.allDepositRecordsForUser(this.props.account, index).call();
+        records.push(record);
+      }
+    } catch (err) {
+      let deposits = await Promise.all(records.map(async (record) => {
+        let recordIndex = parseInt(record);
+        return await this.props.contract.methods.depositRecords(recordIndex).call();
+      }));
+
+      this.setState({ deposits: deposits });
+    }
   }
 
   render() {
@@ -67,12 +89,13 @@ class History extends Component {
           </Col>
         </Row>
 
-        {this.state.utxos.map(function (utxo) {
+        {this.state.deposits.map(function (deposit) {
           return <Container className="tx p-3">
             <Row className="align-items-center">
-              <Col><span className="lead">{utxo.value}</span></Col>
+              <Col className="lead text-nowrap">{deposit.from} <FontAwesomeIcon icon="arrow-right" /></Col>
+              <Col className="lead"><span className="font-weight-bold">{this.formatPrice(deposit.amount)}</span></Col>
               <Col className="col-auto">
-                <Button color="info"><FontAwesomeIcon icon="external-link-alt" /></Button>
+                <a className="btn btn-info" href={"https://rinkeby.etherscan.io/address/" + deposit.from} target="_blank"><FontAwesomeIcon icon="external-link-alt" /></a>
               </Col>
             </Row>
           </Container>
