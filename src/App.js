@@ -58,8 +58,7 @@ class App extends Component {
 
     let contractAddress = process.env.REACT_APP_CONTRACT_ADDRESS;
     let contractAbi = JSON.parse(process.env.REACT_APP_CONTRACT_ABI);
-
-    this.state.contract = new this.state.web3js.eth.Contract(contractAbi, contractAddress, { gas: 500000 });
+    this.state.contract = new this.state.web3js.eth.Contract(contractAbi, contractAddress, { gas: 1000000 });
   }
 
   formatPrice(weiPriceString) {
@@ -70,27 +69,24 @@ class App extends Component {
     }
   }
 
-  setMetaMaskAccount() {
+  async setMetaMaskAccount() {
     let self = this;
 
-    this.state.web3js.eth.getAccounts().then((accounts) => {
-      if (accounts.length === 0) {
-        this.setState({ metamaskWarningOpen: true });
-        return;
-      }
+    let accounts = await this.state.web3js.eth.getAccounts();
+    if (accounts.length === 0) {
+      this.setState({ metamaskWarningOpen: true });
+      return;
+    }
 
-      let account = accounts[0];
+    let account = accounts[0];
 
-      if (account && this.state.account !== account) {
-        let contract = this.state.contract;
-        contract.options.from = account;
-        this.state.web3js.eth.getBalance(account, function (error, balance) {
-          if (!error) {
-            self.setState({ account: accounts[0], contract: contract, ethBalance: balance });
-          }
-        });
-      }
-    });
+    if (account && this.state.account !== account) {
+      let contract = this.state.contract;
+      contract.options.from = account;
+
+      let balance = await this.state.web3js.eth.getBalance(account);
+      self.setState({ account: accounts[0], contract: contract, ethBalance: balance });
+    }
   }
 
   toggleDepositModal() {

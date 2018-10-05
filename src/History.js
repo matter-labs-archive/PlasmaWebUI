@@ -92,7 +92,7 @@ class History extends Component {
         {this.state.deposits.map(function (deposit) {
           return <Container className="tx p-3">
             <Row className="align-items-center">
-              <Col className="lead text-nowrap">{deposit.from} <FontAwesomeIcon icon="arrow-right" /></Col>
+              <Col className="lead d-none d-sm-inline">{deposit.from}</Col>
               <Col className="lead"><span className="font-weight-bold">{this.formatPrice(deposit.amount)}</span></Col>
               <Col className="col-auto">
                 <a className="btn btn-info" href={"https://rinkeby.etherscan.io/address/" + deposit.from} target="_blank"><FontAwesomeIcon icon="external-link-alt" /></a>

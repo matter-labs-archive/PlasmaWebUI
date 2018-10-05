@@ -9,6 +9,10 @@ import { BN } from 'bn.js';
 import * as ethUtil from 'ethereumjs-util';
 import './Transactions.css';
 
+function sleep (time) {
+  return new Promise((resolve) => setTimeout(resolve, time));
+}
+
 class Transactions extends Component {
   constructor(props) {
     super(props);
@@ -68,7 +72,7 @@ class Transactions extends Component {
     this.setState({transferAmount: event.target.value});
   }
 
-  onTransferSubmit(event) {
+  async onTransferSubmit(event) {
     event.preventDefault();
 
     let self = this;
@@ -77,16 +81,20 @@ class Transactions extends Component {
     if (amount > 0) {
       let weiAmount = this.props.web3js.utils.toWei((Math.floor(amount * 1000)).toString(), 'finney');
 
-      this.transfer(this.state.transferUTXO, this.props.account, this.state.transferAddressTo, weiAmount).then(() => {
+      try {
+        await this.transfer(this.state.transferUTXO, this.props.account, this.state.transferAddressTo, weiAmount);
         self.setState({ transferModalOpen: false });
         console.log('Success!');
-      }).catch(error => {
-        console.log('Error:', error);
-      });
+        await this.loadTransactions(this.props.account);
+        await sleep(5000);
+        await this.loadTransactions(this.props.account);
+      } catch(err) {
+        console.log('Error:', err);
+      };
     }
   }
 
-  loadTransactions(address) {
+  async loadTransactions(address) {
     let self = this;
     let url = `${process.env.REACT_APP_API_URL_PREFIX}/listUTXOs`;
 
@@ -98,144 +106,138 @@ class Transactions extends Component {
       "limit": 50
     };
     
-    fetch(url, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
-      mode: 'cors',
-      body: JSON.stringify(payload)
-    })
-    .then(  
-      function (response) {  
-        if (response.status !== 200) {  
-          console.log('Responce status error:', response.status);  
-          return;  
-        }
+    try {
+      let response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        mode: 'cors',
+        body: JSON.stringify(payload)
+      });
 
-        response.json().then(function (data) {  
-          self.setState({ utxos: data.utxos });
+      if (response.status !== 200) {  
+        console.log('Responce status error:', response.status);  
+        return;  
+      }
 
-          let balance = new BN();
+      try {
+        let data = await response.json();
+        self.setState({ utxos: data.utxos });
 
-          data.utxos.map(function (utxo) {
-            balance.iadd(new BN(utxo.value));
-          });
+        let balance = new BN();
 
-          self.props.onBalanceChanged(balance.toString());
+        data.utxos.map(function (utxo) {
+          balance.iadd(new BN(utxo.value));
         });
-      }  
-    )  
-    .catch(function (err) {  
+
+        self.props.onBalanceChanged(balance.toString());
+      } catch (err) {  
+        console.log('JSON decode error:', err);
+      }
+    } 
+    catch (err) {  
       console.log('Request error:', err);
-    });
+    }
   }
 
-  transfer(utxo, addressFrom, addressTo, weiAmount) {
+  async transfer(utxo, addressFrom, addressTo, weiAmount) {
     let self = this;
 
-    return new Promise(function (resolve, reject) {
-      console.log('Transferring...');
+    console.log('Transferring...');
 
-      let allInputs = [];
-      let allOutputs = [];
+    let allInputs = [];
+    let allOutputs = [];
 
-      const inp = new TransactionInput({
-        blockNumber: (new BN(utxo.blockNumber)).toArrayLike(Buffer, 'be', 4),
-        txNumberInBlock: (new BN(utxo.transactionNumber)).toArrayLike(Buffer, 'be', 4),
-        outputNumberInTransaction: (new BN(utxo.outputNumber)).toArrayLike(Buffer, 'be', 1),
-        amountBuffer: (new BN(utxo.value)).toArrayLike(Buffer, 'be', 32)
-      });
-      allInputs.push(inp);
-
-      weiAmount = new BN(weiAmount);
-
-      let zero = new BN();
-      let changeWeiAmount = new BN(utxo.value);
-      changeWeiAmount.isub(weiAmount);
-
-      let outputs = [{ to: addressTo, amount: weiAmount.toString() }];
-
-      if (changeWeiAmount.gt(zero)) {
-        outputs.push({ to: addressFrom, amount: changeWeiAmount.toString() });
-      }
-
-      if (changeWeiAmount.lt(zero)) {
-        reject('Insufficient funds');
-      }
-
-      if (!ethUtil.isValidAddress(addressTo)) {
-        reject('Invalid address');
-      }
-
-      let outputCounter = 0;
-      for (const output of outputs) {
-        const out = new TransactionOutput({
-          outputNumberInTransaction: (new BN(outputCounter)).toArrayLike(Buffer, 'be', 1),
-          amountBuffer: (new BN(output.amount)).toArrayLike(Buffer, 'be', 32),
-          to: ethUtil.toBuffer(output.to)
-        });
-        allOutputs.push(out);
-        outputCounter++;
-      }
-      
-      const plasmaTransaction = new PlasmaTransaction({
-        transactionType: (new BN(TxTypeSplit)).toArrayLike(Buffer, 'be', 1),
-        inputs: allInputs,
-        outputs: allOutputs
-      });
-
-      const tx = new PlasmaTransactionWithSignature({
-        transaction: plasmaTransaction
-      });
-
-      const serialized = tx.transaction.serialize();
-      const txHex = ethUtil.bufferToHex(serialized);
-
-      self.props.web3js.eth.personal.sign(txHex, addressFrom).then((sigRes) => {
-        console.log(sigRes);
-
-        tx.serializeSignature(sigRes);
-        const fullTX = ethUtil.bufferToHex(tx.serialize());
-
-        let url = `${process.env.REACT_APP_API_URL_PREFIX}/sendRawTX`;
-        
-        let payload = {
-          tx: fullTX,
-        }
-
-        fetch(url, {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          },
-          mode: 'cors',
-          body: JSON.stringify(payload)
-        })
-        .then(  
-          function (response) {  
-            if (response.status !== 200) {  
-              reject('Responce status error');  
-            }
-
-            response.json().then(function (data) {
-              if (data.error) {
-                reject(data.reason);
-              } else {
-                resolve();
-              }
-            });
-          }  
-        )  
-        .catch(function (err) {  
-          reject(err);
-        });
-      }).catch(err => {
-        reject(err);
-      });
+    const inp = new TransactionInput({
+      blockNumber: (new BN(utxo.blockNumber)).toArrayLike(Buffer, 'be', 4),
+      txNumberInBlock: (new BN(utxo.transactionNumber)).toArrayLike(Buffer, 'be', 4),
+      outputNumberInTransaction: (new BN(utxo.outputNumber)).toArrayLike(Buffer, 'be', 1),
+      amountBuffer: (new BN(utxo.value)).toArrayLike(Buffer, 'be', 32)
     });
+    allInputs.push(inp);
+
+    weiAmount = new BN(weiAmount);
+
+    let zero = new BN();
+    let changeWeiAmount = new BN(utxo.value);
+    changeWeiAmount.isub(weiAmount);
+
+    let outputs = [{ to: addressTo, amount: weiAmount.toString() }];
+
+    if (changeWeiAmount.gt(zero)) {
+      outputs.push({ to: addressFrom, amount: changeWeiAmount.toString() });
+    }
+
+    if (changeWeiAmount.lt(zero)) {
+      throw 'Insufficient funds';
+    }
+
+    if (!ethUtil.isValidAddress(addressTo)) {
+      throw 'Invalid address';
+    }
+
+    let outputCounter = 0;
+    for (const output of outputs) {
+      const out = new TransactionOutput({
+        outputNumberInTransaction: (new BN(outputCounter)).toArrayLike(Buffer, 'be', 1),
+        amountBuffer: (new BN(output.amount)).toArrayLike(Buffer, 'be', 32),
+        to: ethUtil.toBuffer(output.to)
+      });
+      allOutputs.push(out);
+      outputCounter++;
+    }
+    
+    const plasmaTransaction = new PlasmaTransaction({
+      transactionType: (new BN(TxTypeSplit)).toArrayLike(Buffer, 'be', 1),
+      inputs: allInputs,
+      outputs: allOutputs
+    });
+
+    const tx = new PlasmaTransactionWithSignature({
+      transaction: plasmaTransaction
+    });
+
+    const serialized = tx.transaction.serialize();
+    const txHex = ethUtil.bufferToHex(serialized);
+
+    let sigRes = await self.props.web3js.eth.personal.sign(txHex, addressFrom);
+
+    tx.serializeSignature(sigRes);
+    const fullTX = ethUtil.bufferToHex(tx.serialize());
+
+    let url = `${process.env.REACT_APP_API_URL_PREFIX}/sendRawTX`;
+    
+    let payload = {
+      tx: fullTX,
+    }
+
+    try {
+      let response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        mode: 'cors',
+        body: JSON.stringify(payload)
+      });
+
+      if (response.status !== 200) {  
+        throw 'Responce status error';
+      }
+
+      response.json().then(function (data) {
+        if (data.error) {
+          throw data.reason;
+        } else {
+          return;
+        }
+      });
+    } catch (err) {  
+      throw err;
+    };
   }
 
   render() {
