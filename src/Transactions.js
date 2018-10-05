@@ -5,6 +5,7 @@ import { PlasmaTransactionWithSignature } from './plasma-tx-js/Tx/RLPtxWithSigna
 import { PlasmaTransaction, TxTypeSplit } from './plasma-tx-js/Tx/RLPtx';
 import { TransactionInput } from './plasma-tx-js/Tx/RLPinput';
 import { TransactionOutput } from './plasma-tx-js/Tx/RLPoutput';
+import { Block } from './plasma-tx-js/Block/RLPblock';
 import { BN } from 'bn.js';
 import * as ethUtil from 'ethereumjs-util';
 import './Transactions.css';
@@ -20,6 +21,7 @@ class Transactions extends Component {
     this.state = {
       sortDropdownOpen: false,
       transferModalOpen: false,
+      withdrawModalOpen: false,
       transferAddressTo: '',
       transferAmount: '',
       utxos: [],
@@ -27,9 +29,13 @@ class Transactions extends Component {
 
     this.toggleSort = this.toggleSort.bind(this);
     this.toggleTransferModal = this.toggleTransferModal.bind(this);
+    this.openTransferModal = this.openTransferModal.bind(this);
     this.handleAddressChange = this.handleAddressChange.bind(this);
     this.handleAmountChange = this.handleAmountChange.bind(this);
     this.onTransferSubmit = this.onTransferSubmit.bind(this);
+    this.toggleWithdrawModal = this.toggleWithdrawModal.bind(this);
+    this.openWithdrawModal = this.openWithdrawModal.bind(this);
+    this.onWithdrawSubmit = this.onWithdrawSubmit.bind(this);
   }
 
   componentDidUpdate(prevProps) {
@@ -94,6 +100,61 @@ class Transactions extends Component {
     }
   }
 
+  toggleWithdrawModal(utxo) {
+    this.setState({ withdrawModalOpen: !this.state.withdrawModalOpen });
+  }
+
+  openWithdrawModal(utxo) {
+    this.setState({
+      withdrawModalOpen: true,
+      withdrawUTXO: utxo,
+    });
+  }
+
+  async onWithdrawSubmit(event) {
+    event.preventDefault();
+
+    let self = this;
+    let blockNumber = this.state.withdrawUTXO.blockNumber;
+    let url = `${process.env.REACT_APP_BLOCK_STORAGE_PREFIX}/${blockNumber}`;
+
+    try {
+      let response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/octet-stream'
+        },
+        mode: 'cors',
+      });
+
+      let blockBlob = await response.blob();
+
+      var reader = new FileReader();
+      reader.addEventListener("loadend", function(x) {
+        let blockArrayBuffer = this.result;
+        let blockBuffer = new Buffer(blockArrayBuffer);
+        console.log(blockBuffer)
+        let block = new Block(blockBuffer);
+        console.log(block);
+        let proof = block.getProofForTransactionByNumber(self.state.withdrawUTXO.transactionNumber);
+        console.log(proof);
+
+        self.props.contract.methods.startExit(self.state.withdrawUTXO.blockNumber, self.state.withdrawUTXO.outputNumber, proof.tx.serialize(), proof.proof).send().on('transactionHash', async function (hash) {
+          console.log('hash');
+          console.log(`https://rinkeby.etherscan.io/tx/${hash}`);
+          self.setState({ withdrawModalOpen: false });
+          console.log('Success!');
+          await sleep(2000);
+          await self.loadTransactions(self.props.account);
+        });
+      });
+      reader.readAsArrayBuffer(blockBlob);
+    } 
+    catch (err) {  
+      console.log('Request error:', err);
+    }
+  }
+
   async loadTransactions(address) {
     let self = this;
     let url = `${process.env.REACT_APP_API_URL_PREFIX}/listUTXOs`;
@@ -118,8 +179,7 @@ class Transactions extends Component {
       });
 
       if (response.status !== 200) {  
-        console.log('Responce status error:', response.status);  
-        return;  
+        throw 'Error loading transactions';  
       }
 
       try {
@@ -225,7 +285,7 @@ class Transactions extends Component {
       });
 
       if (response.status !== 200) {  
-        throw 'Responce status error';
+        throw 'Response status error';
       }
 
       response.json().then(function (data) {
@@ -265,9 +325,17 @@ class Transactions extends Component {
               <Col className="text-nowrap"><Badge color="primary" className="mr-1" title="Block number"><span className="d-none d-sm-inline">B </span>{utxo.blockNumber}</Badge><Badge color="secondary" className="mr-1" title="Transaction number"><span className="d-none d-sm-inline">T </span>{utxo.transactionNumber}</Badge><Badge color="info" className="mr-3" title="Output number"><span className="d-none d-sm-inline">O </span>{utxo.outputNumber}</Badge></Col>
               <Col className="lead"><span className="font-weight-bold">{this.formatPrice(utxo.value)}</span></Col>
               <Col className="col-auto">
-                <Button color="success" className="mr-0" onClick={() => this.openTransferModal(utxo)} title="Transfer"><FontAwesomeIcon icon="arrow-right" /> <span className="d-none d-sm-inline">Transfer</span></Button>
-                <Button hidden={true} color="info" className="mr-2" title="Merge"><FontAwesomeIcon icon="sitemap" rotation={90} /> <span className="d-none d-md-inline">Merge</span></Button>
-                <Button hidden={true} color="primary" title="Withdraw"><FontAwesomeIcon icon="sign-out-alt" /> <span className="d-none d-md-inline">Withdraw</span></Button>
+                <Button color="success" className="mr-2" onClick={() => this.openTransferModal(utxo)} title="Transfer"><FontAwesomeIcon icon="arrow-right" /> <span className="d-none d-sm-inline">Transfer</span></Button>          
+                <ButtonDropdown hidden={true} isOpen={this.state.sortDropdownOpen} toggle={this.toggleSort} className="mr-2" title="Merge With...">
+                  <DropdownToggle color="info" caret>
+                    <FontAwesomeIcon icon="sitemap" rotation={90} /> <span className="d-none d-md-inline">Merge With&hellip;</span>
+                  </DropdownToggle>
+                  <DropdownMenu>
+                    <DropdownItem>Block Number</DropdownItem>
+                    <DropdownItem>Amount</DropdownItem>
+                  </DropdownMenu>
+                </ButtonDropdown>
+                <Button color="primary" onClick={() => this.openWithdrawModal(utxo)} title="Withdraw"><FontAwesomeIcon icon="sign-out-alt" /> <span className="d-none d-md-inline">Withdraw</span></Button>
               </Col>
             </Row>
           </Container>
@@ -292,6 +360,18 @@ class Transactions extends Component {
             <ModalFooter>
               <Button color="success" type="submit" className="mr-2"><FontAwesomeIcon icon="arrow-right" /> <span className="d-none d-sm-inline">Transfer</span></Button>
               <Button color="secondary" onClick={this.toggleTransferModal}>Cancel</Button>
+            </ModalFooter>
+          </Form>
+        </Modal>
+        <Modal isOpen={this.state.withdrawModalOpen} toggle={this.toggleWithdrawModal}>
+          <Form onSubmit={this.onWithdrawSubmit}>
+            <ModalHeader toggle={this.toggleWithdrawModal}>Start Withdraw</ModalHeader>
+            <ModalBody>
+              <p className="lead">You are about to initiate withdrawal process. It will take 2 week period.</p>
+            </ModalBody>
+            <ModalFooter>
+              <Button color="success" type="submit" className="mr-2"><FontAwesomeIcon icon="arrow-right" /> <span className="d-none d-sm-inline">Start Withdraw</span></Button>
+              <Button color="secondary" onClick={this.toggleWithdrawModal}>Cancel</Button>
             </ModalFooter>
           </Form>
         </Modal>

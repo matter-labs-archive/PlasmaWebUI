@@ -156,7 +156,7 @@ class App extends Component {
           <Alert color="info" isOpen={this.state.metamaskWarningOpen} toggle={this.onDismissMetamaskInfo}>
             Please unlock MetaMask account and select Rinkeby test network
           </Alert>
-          <Transactions web3js={this.state.web3js} account={this.state.account} onBalanceChanged={this.onPlasmaBalanceChanged} />
+          <Transactions web3js={this.state.web3js} contract={this.state.contract} account={this.state.account} onBalanceChanged={this.onPlasmaBalanceChanged} />
           <History web3js={this.state.web3js} contract={this.state.contract} account={this.state.account} />
           <footer className="pt-4 my-md-5 pt-md-5 border-top mx-3">
             <div className="row">
