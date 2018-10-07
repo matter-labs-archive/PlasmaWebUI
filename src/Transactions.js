@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Container, Row, Col, Button, ButtonDropdown, DropdownToggle, DropdownMenu, DropdownItem, Badge, Modal, ModalHeader, ModalBody, ModalFooter, Form, FormGroup, Label, Input } from 'reactstrap';
 import { PlasmaTransactionWithSignature } from './plasma-tx-js/Tx/RLPtxWithSignature';
-import { PlasmaTransaction, TxTypeSplit } from './plasma-tx-js/Tx/RLPtx';
+import { PlasmaTransaction, TxTypeSplit, TxTypeMerge } from './plasma-tx-js/Tx/RLPtx';
 import { TransactionInput } from './plasma-tx-js/Tx/RLPinput';
 import { TransactionOutput } from './plasma-tx-js/Tx/RLPoutput';
 import { Block } from './plasma-tx-js/Block/RLPblock';
@@ -24,6 +24,7 @@ class Transactions extends Component {
       withdrawModalOpen: false,
       transferAddressTo: '',
       transferAmount: '',
+      mergeUTXOs: [],
       utxos: [],
     };
 
@@ -57,6 +58,28 @@ class Transactions extends Component {
     this.setState({ sortDropdownOpen: !this.state.sortDropdownOpen });
   }
 
+  toggleMerge(utxo) {
+    if (this.state.mergeUTXO) {
+      utxo = null;
+    }
+
+    let mergeUTXOs = [];
+
+    if (utxo) {
+      for (const u of this.state.utxos) {
+        if (u !== utxo)
+        mergeUTXOs.push(u);
+      }
+    }
+
+    console.log(mergeUTXOs);
+
+    this.setState({
+      mergeUTXO: utxo,
+      mergeUTXOs: mergeUTXOs,
+    });
+  }
+
   toggleTransferModal(utxo) {
     this.setState({ transferModalOpen: !this.state.transferModalOpen });
   }
@@ -81,7 +104,7 @@ class Transactions extends Component {
   async onTransferSubmit(event) {
     event.preventDefault();
 
-    let self = this;
+    const self = this;
     let amount = parseFloat(this.state.transferAmount);
 
     if (amount > 0) {
@@ -114,12 +137,12 @@ class Transactions extends Component {
   async onWithdrawSubmit(event) {
     event.preventDefault();
 
-    let self = this;
-    let blockNumber = this.state.withdrawUTXO.blockNumber;
-    let url = `${process.env.REACT_APP_BLOCK_STORAGE_PREFIX}/${blockNumber}`;
+    const self = this;
+    const blockNumber = this.state.withdrawUTXO.blockNumber;
+    const url = `${process.env.REACT_APP_BLOCK_STORAGE_PREFIX}/${blockNumber}`;
 
     try {
-      let response = await fetch(url, {
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Accept': 'application/octet-stream'
@@ -127,19 +150,17 @@ class Transactions extends Component {
         mode: 'cors',
       });
 
-      let blockBlob = await response.blob();
+      const blockBlob = await response.blob();
 
-      var reader = new FileReader();
-      reader.addEventListener("loadend", function(x) {
-        let blockArrayBuffer = this.result;
-        let blockBuffer = new Buffer(blockArrayBuffer);
-        console.log(blockBuffer)
-        let block = new Block(blockBuffer);
-        console.log(block);
-        let proof = block.getProofForTransactionByNumber(self.state.withdrawUTXO.transactionNumber);
-        console.log(proof);
+      const reader = new FileReader();
+      reader.addEventListener("loadend", async function () {
+        const blockArrayBuffer = this.result;
+        const blockBuffer = new Buffer(blockArrayBuffer);
+        const block = new Block(blockBuffer);
+        const proof = block.getProofForTransactionByNumber(self.state.withdrawUTXO.transactionNumber);
+        const withdrawCollateral = await self.props.contract.methods.WithdrawCollateral().call();
 
-        self.props.contract.methods.startExit(self.state.withdrawUTXO.blockNumber, self.state.withdrawUTXO.outputNumber, proof.tx.serialize(), proof.proof).send().on('transactionHash', async function (hash) {
+        await self.props.contract.methods.startExit(self.state.withdrawUTXO.blockNumber, self.state.withdrawUTXO.outputNumber, ethUtil.bufferToHex(proof.tx.serialize()), ethUtil.bufferToHex(proof.proof)).send({ value: withdrawCollateral }).on('transactionHash', async function (hash) {
           console.log('hash');
           console.log(`https://rinkeby.etherscan.io/tx/${hash}`);
           self.setState({ withdrawModalOpen: false });
@@ -156,7 +177,7 @@ class Transactions extends Component {
   }
 
   async loadTransactions(address) {
-    let self = this;
+    const self = this;
     let url = `${process.env.REACT_APP_API_URL_PREFIX}/listUTXOs`;
 
     let payload = {
@@ -203,7 +224,7 @@ class Transactions extends Component {
   }
 
   async transfer(utxo, addressFrom, addressTo, weiAmount) {
-    let self = this;
+    const self = this;
 
     console.log('Transferring...');
 
@@ -288,10 +309,99 @@ class Transactions extends Component {
         throw 'Response status error';
       }
 
-      response.json().then(function (data) {
+      response.json().then(async function (data) {
         if (data.error) {
           throw data.reason;
         } else {
+          await sleep(500);
+          await self.loadTransactions(self.props.account);
+          await sleep(60000);
+          await self.loadTransactions(self.props.account);
+          return;
+        }
+      });
+    } catch (err) {  
+      throw err;
+    };
+  }
+
+  async merge(utxos) {
+    const self = this;
+
+    console.log('Merging...');
+    console.log(utxos);
+
+    let allInputs = [];
+    let allOutputs = [];
+
+    const address = this.props.account;
+
+    let weiAmount = new BN();
+    for (const utxo of utxos) {
+      weiAmount.iadd(new BN(utxo.value));
+      const inp = new TransactionInput({
+        blockNumber: (new BN(utxo.blockNumber)).toArrayLike(Buffer, 'be', 4),
+        txNumberInBlock: (new BN(utxo.transactionNumber)).toArrayLike(Buffer, 'be', 4),
+        outputNumberInTransaction: (new BN(utxo.outputNumber)).toArrayLike(Buffer, 'be', 1),
+        amountBuffer: (new BN(utxo.value)).toArrayLike(Buffer, 'be', 32)
+      });
+      allInputs.push(inp);
+    }
+
+    const out = new TransactionOutput({
+      outputNumberInTransaction: (new BN(0)).toArrayLike(Buffer, 'be', 1),
+      amountBuffer: weiAmount.toArrayLike(Buffer, 'be', 32),
+      to: ethUtil.toBuffer(address)
+    });
+    allOutputs.push(out);
+    
+    const plasmaTransaction = new PlasmaTransaction({
+      transactionType: (new BN(TxTypeMerge)).toArrayLike(Buffer, 'be', 1),
+      inputs: allInputs,
+      outputs: allOutputs
+    });
+
+    const tx = new PlasmaTransactionWithSignature({
+      transaction: plasmaTransaction
+    });
+
+    const serialized = tx.transaction.serialize();
+    const txHex = ethUtil.bufferToHex(serialized);
+
+    let sigRes = await self.props.web3js.eth.personal.sign(txHex, address);
+
+    tx.serializeSignature(sigRes);
+    const fullTX = ethUtil.bufferToHex(tx.serialize());
+
+    let url = `${process.env.REACT_APP_API_URL_PREFIX}/sendRawTX`;
+    
+    let payload = {
+      tx: fullTX,
+    }
+
+    try {
+      let response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        mode: 'cors',
+        body: JSON.stringify(payload)
+      });
+
+      if (response.status !== 200) {  
+        throw 'Response status error';
+      }
+
+      response.json().then(async function (data) {
+        if (data.error) {
+          throw data.reason;
+        } else {
+          await sleep(500);
+          await self.loadTransactions(self.props.account);
+          await sleep(60000);
+          await self.loadTransactions(self.props.account);
           return;
         }
       });
@@ -314,7 +424,6 @@ class Transactions extends Component {
               </DropdownToggle>
               <DropdownMenu>
                 <DropdownItem>Block Number</DropdownItem>
-                <DropdownItem>Amount</DropdownItem>
               </DropdownMenu>
             </ButtonDropdown>
           </Col>
@@ -326,13 +435,19 @@ class Transactions extends Component {
               <Col className="lead"><span className="font-weight-bold">{this.formatPrice(utxo.value)}</span></Col>
               <Col className="col-auto">
                 <Button color="success" className="mr-2" onClick={() => this.openTransferModal(utxo)} title="Transfer"><FontAwesomeIcon icon="arrow-right" /> <span className="d-none d-sm-inline">Transfer</span></Button>          
-                <ButtonDropdown hidden={true} isOpen={this.state.sortDropdownOpen} toggle={this.toggleSort} className="mr-2" title="Merge With...">
+                <ButtonDropdown isOpen={this.state.mergeUTXO === utxo} toggle={() => this.toggleMerge(utxo)} className="mr-2" title="Merge With...">
                   <DropdownToggle color="info" caret>
                     <FontAwesomeIcon icon="sitemap" rotation={90} /> <span className="d-none d-md-inline">Merge With&hellip;</span>
                   </DropdownToggle>
-                  <DropdownMenu>
-                    <DropdownItem>Block Number</DropdownItem>
-                    <DropdownItem>Amount</DropdownItem>
+                  <DropdownMenu className="wideMenu">
+                    {this.state.mergeUTXOs.map(function (u) {
+                      return <DropdownItem onClick={() => this.merge([utxo, u])}>
+                        <Row className="align-items-center">
+                          <Col><Badge color="primary" className="mr-1" title="Block number"><span className="d-none d-sm-inline">B </span>{u.blockNumber}</Badge><Badge color="secondary" className="mr-1" title="Transaction number"><span className="d-none d-sm-inline">T </span>{u.transactionNumber}</Badge><Badge color="info" className="mr-3" title="Output number"><span className="d-none d-sm-inline">O </span>{u.outputNumber}</Badge></Col>
+                          <Col className="text-right">{this.formatPrice(u.value)}</Col>
+                        </Row>
+                      </DropdownItem>
+                    }, this)}
                   </DropdownMenu>
                 </ButtonDropdown>
                 <Button color="primary" onClick={() => this.openWithdrawModal(utxo)} title="Withdraw"><FontAwesomeIcon icon="sign-out-alt" /> <span className="d-none d-md-inline">Withdraw</span></Button>

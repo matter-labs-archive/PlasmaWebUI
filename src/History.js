@@ -21,9 +21,7 @@ class History extends Component {
 
   componentDidUpdate(prevProps) {
     if (this.props.account !== prevProps.account) {
-      if (this.state.filter === 'deposits') {
-        this.loadDeposits(this.props.account);
-      }
+      this.loadData(this.props.account);
     }
   }
 
@@ -64,6 +62,28 @@ class History extends Component {
     }
   }
 
+  async loadWithdrawals(address) {
+    let records = [];
+
+    try {
+      for (let index = 0; ; index++) {
+        let record = await this.props.contract.methods.allExitsForUser(this.props.account, index).call();
+        records.push(record);
+      }
+    } catch (err) {
+      let withdrawals = await Promise.all(records.map(async (record) => {
+        return await this.props.contract.methods.exitRecords(record).call();
+      }));
+
+      this.setState({ withdrawals: withdrawals });
+    }
+  }
+
+  loadData(address) {
+    this.loadDeposits(address);
+    this.loadWithdrawals(address);
+  }
+
   render() {
     return (
       <div className="History">
@@ -88,18 +108,32 @@ class History extends Component {
             </ButtonDropdown>
           </Col>
         </Row>
-
-        {this.state.deposits.map(function (deposit) {
-          return <Container className="tx p-3">
-            <Row className="align-items-center">
-              <Col className="lead d-none d-sm-inline">{deposit.from}</Col>
-              <Col className="lead"><span className="font-weight-bold">{this.formatPrice(deposit.amount)}</span></Col>
-              <Col className="col-auto">
-                <a className="btn btn-info" href={"https://rinkeby.etherscan.io/address/" + deposit.from} target="_blank"><FontAwesomeIcon icon="external-link-alt" /></a>
-              </Col>
-            </Row>
-          </Container>
-        }, this)}
+        <div hidden={this.state.filter !== 'deposits'}>
+          {this.state.deposits.map(function (deposit) {
+            return <Container className="tx p-3">
+              <Row className="align-items-center">
+                <Col className="lead d-none d-sm-inline">{deposit.from}</Col>
+                <Col className="lead"><span className="font-weight-bold">{this.formatPrice(deposit.amount)}</span></Col>
+                <Col className="col-auto">
+                  <a className="btn btn-info" href={"https://rinkeby.etherscan.io/address/" + deposit.from} target="_blank"><FontAwesomeIcon icon="external-link-alt" /></a>
+                </Col>
+              </Row>
+            </Container>
+          }, this)}
+        </div>
+        <div hidden={this.state.filter !== 'withdrawals'}>
+          {this.state.withdrawals.map(function (withdrawal) {
+            return <Container className="tx p-3">
+              <Row className="align-items-center">
+                <Col className="lead d-none d-sm-inline">{withdrawal.owner}</Col>
+                <Col className="lead"><span className="font-weight-bold">{this.formatPrice(withdrawal.amount)}</span></Col>
+                <Col className="col-auto">
+                  <a className="btn btn-info" href={"https://rinkeby.etherscan.io/address/" + withdrawal.owner} target="_blank"><FontAwesomeIcon icon="external-link-alt" /></a>
+                </Col>
+              </Row>
+            </Container>
+          }, this)}
+        </div>
       </div>
     );
   }
