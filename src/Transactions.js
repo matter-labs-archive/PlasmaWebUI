@@ -158,9 +158,9 @@ class Transactions extends Component {
         const blockBuffer = new Buffer(blockArrayBuffer);
         const block = new Block(blockBuffer);
         const proof = block.getProofForTransactionByNumber(self.state.withdrawUTXO.transactionNumber);
-        const withdrawCollateral = await self.props.contract.methods.WithdrawCollateral().call();
+        const withdrawCollateral = await self.props.plasmaContract.methods.WithdrawCollateral().call();
 
-        await self.props.contract.methods.startExit(self.state.withdrawUTXO.blockNumber, self.state.withdrawUTXO.outputNumber, ethUtil.bufferToHex(proof.tx.serialize()), ethUtil.bufferToHex(proof.proof)).send({ value: withdrawCollateral }).on('transactionHash', async function (hash) {
+        await self.props.plasmaContract.methods.startExit(self.state.withdrawUTXO.blockNumber, self.state.withdrawUTXO.outputNumber, ethUtil.bufferToHex(proof.tx.serialize()), ethUtil.bufferToHex(proof.proof)).send({ value: withdrawCollateral }).on('transactionHash', async function (hash) {
           console.log('hash');
           console.log(`https://rinkeby.etherscan.io/tx/${hash}`);
           self.setState({ withdrawModalOpen: false });

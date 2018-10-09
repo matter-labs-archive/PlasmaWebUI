@@ -9,10 +9,11 @@ class History extends Component {
     super(props);
 
     this.state = {
-      filter: 'deposits',
+      filter: 'withdrawals', //'deposits',
       sortDropdownOpen: false,
       deposits: [],
       withdrawals: [],
+      priorities: {},
     };
 
     this.setFilter = this.setFilter.bind(this);
@@ -23,6 +24,10 @@ class History extends Component {
     if (this.props.account !== prevProps.account) {
       this.loadData(this.props.account);
     }
+
+    if (this.props.priorityQueueContract !== prevProps.priorityQueueContract) {
+      this.loadPriorityQueue();
+    }
   }
 
   formatPrice(weiPriceString) {
@@ -32,6 +37,46 @@ class History extends Component {
     } else {
       return `${weiPriceString} Wei`
     }
+  }
+
+  formatDepositStatus(status) {
+    switch (parseInt(status)) {
+      case 0:
+        return 'No deposit';
+      case 1:
+        return 'Deposited';
+      case 2:
+        return 'Withdraw Started';
+      case 3:
+        return 'Withdraw Completed';
+      case 4:
+        return 'Deposit Confirmed';
+      default:
+        return '';
+    }
+  }
+
+  formatTime(timestamp) {
+    if (!timestamp)
+      return '';
+
+    var date = new Date(timestamp * 1000);
+
+    var month = date.getMonth() + 1;
+    var day = date.getDate();
+    var hour = date.getHours();
+    var min = date.getMinutes();
+    var sec = date.getSeconds();
+
+    month = (month < 10 ? "0" : "") + month;
+    day = (day < 10 ? "0" : "") + day;
+    hour = (hour < 10 ? "0" : "") + hour;
+    min = (min < 10 ? "0" : "") + min;
+    sec = (sec < 10 ? "0" : "") + sec;
+
+    var str = date.getFullYear() + "-" + month + "-" + day + " " +  hour + ":" + min + ":" + sec;
+
+    return str;
   }
 
   setFilter(filter) {
@@ -49,13 +94,13 @@ class History extends Component {
 
     try {
       for (let index = 0; ; index++) {
-        let record = await this.props.contract.methods.allDepositRecordsForUser(this.props.account, index).call();
+        let record = await this.props.plasmaContract.methods.allDepositRecordsForUser(this.props.account, index).call();
         records.push(record);
       }
     } catch (err) {
       let deposits = await Promise.all(records.map(async (record) => {
         let recordIndex = parseInt(record);
-        return await this.props.contract.methods.depositRecords(recordIndex).call();
+        return await this.props.plasmaContract.methods.depositRecords(recordIndex).call();
       }));
 
       this.setState({ deposits: deposits });
@@ -64,18 +109,43 @@ class History extends Component {
 
   async loadWithdrawals(address) {
     let records = [];
+    let recordToWithdrawalMap = {};
 
     try {
       for (let index = 0; ; index++) {
-        let record = await this.props.contract.methods.allExitsForUser(this.props.account, index).call();
+        let record = await this.props.plasmaContract.methods.allExitsForUser(this.props.account, index).call();
         records.push(record);
       }
     } catch (err) {
       let withdrawals = await Promise.all(records.map(async (record) => {
-        return await this.props.contract.methods.exitRecords(record).call();
+        let withdrawal = await this.props.plasmaContract.methods.exitRecords(record).call();
+        withdrawal.partialHash = record;
+        return withdrawal;
       }));
 
-      this.setState({ withdrawals: withdrawals });
+      this.setState({ withdrawals: withdrawals, recordToWithdrawalMap: recordToWithdrawalMap });
+    }
+  }
+
+  async loadPriorityQueue() {
+    if (!this.props.priorityQueueContract)
+      return;
+
+    let priorities = {};
+
+    try {
+      for (let index = 0; ; index++) {
+        let queueItem = await this.props.priorityQueueContract.methods.heapList(index).call();
+        priorities[queueItem.partialHash] = queueItem.priority;
+      }
+    } catch (err) {
+      // Estimation for exit
+      const record = await this.props.priorityQueueContract.methods.getMin().call();
+      const withdrawal = await this.props.plasmaContract.methods.exitRecords(record).call();
+      const exitDelay = await this.props.plasmaContract.methods.ExitDelay().call();
+      const estimation = parseInt(withdrawal.timePublished) + parseInt(exitDelay);
+
+      this.setState({ priorities: priorities, estimation: estimation, minPriority: priorities[record] });
     }
   }
 
@@ -112,9 +182,9 @@ class History extends Component {
           {this.state.deposits.map(function (deposit) {
             return <Container className="tx p-3">
               <Row className="align-items-center">
-                <Col className="lead d-none d-sm-inline">{deposit.from}</Col>
-                <Col className="lead"><span className="font-weight-bold">{this.formatPrice(deposit.amount)}</span></Col>
-                <Col className="col-auto">
+                <Col className="col-4 lead"><span className="font-weight-bold">{this.formatPrice(deposit.amount)}</span></Col>
+                <Col className="col-6 lead"><span className="font-weight-bold">{this.formatDepositStatus(deposit.status)}</span></Col>
+                <Col className="col-2 text-right">
                   <a className="btn btn-info" href={"https://rinkeby.etherscan.io/address/" + deposit.from} target="_blank"><FontAwesomeIcon icon="external-link-alt" /></a>
                 </Col>
               </Row>
@@ -125,14 +195,14 @@ class History extends Component {
           {this.state.withdrawals.map(function (withdrawal) {
             return <Container className="tx p-3">
               <Row className="align-items-center">
-                <Col className="lead d-none d-sm-inline">{withdrawal.owner}</Col>
-                <Col className="lead"><span className="font-weight-bold">{this.formatPrice(withdrawal.amount)}</span></Col>
-                <Col className="col-auto">
-                  <a className="btn btn-info" href={"https://rinkeby.etherscan.io/address/" + withdrawal.owner} target="_blank"><FontAwesomeIcon icon="external-link-alt" /></a>
-                </Col>
+                <Col className="col-4 lead">{this.formatTime(withdrawal.timePublished)}</Col>
+                <Col className="col-2 lead"><span className="font-weight-bold">{this.formatPrice(withdrawal.amount)}</span></Col>
+                <Col className="col-4 lead">Priority: <span className="font-weight-bold">{this.state.priorities[withdrawal.partialHash]}</span></Col>
+                <Col className="col-2 lead text-right"><span className={"font-weight-bold " + (withdrawal.isValid ? "text-success" : "text-danger")}>{withdrawal.isValid ? "Valid" : "Invalid"}</span></Col>
               </Row>
             </Container>
           }, this)}
+          <p className="lead mx-3 mt-4 text-muted">First item in the queue has the priority {this.state.minPriority} and will exit by {this.formatTime(this.state.estimation)}</p>
         </div>
       </div>
     );

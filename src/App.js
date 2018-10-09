@@ -56,9 +56,10 @@ class App extends Component {
       }
     });
 
-    let contractAddress = process.env.REACT_APP_CONTRACT_ADDRESS;
-    let contractAbi = JSON.parse(process.env.REACT_APP_CONTRACT_ABI);
-    this.state.contract = new this.state.web3js.eth.Contract(contractAbi, contractAddress, { gas: 1000000 });
+    const plasmaContractAddress = process.env.REACT_APP_PLASMA_CONTRACT_ADDRESS;
+    const plasmaContractAbi = JSON.parse(process.env.REACT_APP_PLASMA_CONTRACT_ABI);
+    this.state.plasmaContract = new this.state.web3js.eth.Contract(plasmaContractAbi, plasmaContractAddress, { gas: 1000000 });
+    this.setPriorityQueueContract();
   }
 
   formatPrice(weiPriceString) {
@@ -67,6 +68,13 @@ class App extends Component {
     } else {
       return '0';
     }
+  }
+
+  async setPriorityQueueContract() {
+    const priorityQueueContractAddress = await this.state.plasmaContract.methods.exitQueue().call();
+    const priorityQueueContractAbi = JSON.parse(process.env.REACT_APP_PRIORITY_QUEUE_CONTRACT_ABI);
+    const priorityQueueContract = new this.state.web3js.eth.Contract(priorityQueueContractAbi, priorityQueueContractAddress, { gas: 1000000 });
+    this.setState({ priorityQueueContract: priorityQueueContract });
   }
 
   async setMetaMaskAccount() {
@@ -81,7 +89,7 @@ class App extends Component {
     let account = accounts[0];
 
     if (account && this.state.account !== account) {
-      let contract = this.state.contract;
+      let contract = this.state.plasmaContract;
       contract.options.from = account;
 
       let balance = await this.state.web3js.eth.getBalance(account);
@@ -108,7 +116,7 @@ class App extends Component {
       
       console.log('Depositing...');
 
-      this.state.contract.methods.deposit().send({ value: weiAmount }).on('transactionHash', function (hash) {
+      this.state.plasmaContract.methods.deposit().send({ value: weiAmount }).on('transactionHash', function (hash) {
         self.setState({ depositModalOpen: false });
         console.log(`https://rinkeby.etherscan.io/tx/${hash}`);
       });
@@ -156,8 +164,8 @@ class App extends Component {
           <Alert color="info" isOpen={this.state.metamaskWarningOpen} toggle={this.onDismissMetamaskInfo}>
             Please unlock MetaMask account and select Rinkeby test network
           </Alert>
-          <Transactions web3js={this.state.web3js} contract={this.state.contract} account={this.state.account} onBalanceChanged={this.onPlasmaBalanceChanged} />
-          <History web3js={this.state.web3js} contract={this.state.contract} account={this.state.account} />
+          <Transactions web3js={this.state.web3js} plasmaContract={this.state.plasmaContract} account={this.state.account} onBalanceChanged={this.onPlasmaBalanceChanged} />
+          <History web3js={this.state.web3js} plasmaContract={this.state.plasmaContract} priorityQueueContract={this.state.priorityQueueContract} account={this.state.account} />
           <footer className="pt-4 my-md-5 pt-md-5 border-top mx-3">
             <div className="row">
               <div className="col-12 col-md">
