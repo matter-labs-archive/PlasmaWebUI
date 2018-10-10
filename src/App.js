@@ -11,7 +11,7 @@ import History from './History';
 import logo from './logo.svg';
 import './App.css';
 
-library.add(faEthereum, faSignInAlt, faSignOutAlt, faSortAmountDown, faSitemap, faArrowRight, faExternalLinkAlt)
+library.add(faEthereum, faSignInAlt, faSignOutAlt, faSortAmountDown, faSitemap, faArrowRight, faExternalLinkAlt);
 
 class App extends Component {
   constructor(props) {
