@@ -9,7 +9,7 @@ class History extends Component {
     super(props);
 
     this.state = {
-      filter: 'withdrawals', //'deposits',
+      filter: 'deposits',
       sortDropdownOpen: false,
       deposits: [],
       withdrawals: [],
@@ -179,6 +179,13 @@ class History extends Component {
           </Col>
         </Row>
         <div hidden={this.state.filter !== 'deposits'}>
+          <Container className="border-bottom p-3">
+            <Row className="align-items-center text-muted mt-3">
+              <Col className="col-4 lead">Amount</Col>
+              <Col className="col-6 lead">Status</Col>
+              <Col className="col-2 lead text-right"></Col>
+            </Row>
+          </Container>
           {this.state.deposits.map(function (deposit) {
             return <Container className="tx p-3">
               <Row className="align-items-center">
@@ -192,12 +199,20 @@ class History extends Component {
           }, this)}
         </div>
         <div hidden={this.state.filter !== 'withdrawals'}>
+          <Container className="border-bottom p-3">
+            <Row className="align-items-center text-muted mt-3">
+              <Col className="col-4 lead">Date</Col>
+              <Col className="col-3 lead">Amount</Col>
+              <Col className="col-3 lead">Priority</Col>
+              <Col className="col-2 lead text-right">Status</Col>
+            </Row>
+          </Container>
           {this.state.withdrawals.map(function (withdrawal) {
             return <Container className="tx p-3">
               <Row className="align-items-center">
                 <Col className="col-4 lead">{this.formatTime(withdrawal.timePublished)}</Col>
-                <Col className="col-2 lead"><span className="font-weight-bold">{this.formatPrice(withdrawal.amount)}</span></Col>
-                <Col className="col-4 lead">Priority: <span className="font-weight-bold">{this.state.priorities[withdrawal.partialHash]}</span></Col>
+                <Col className="col-3 lead"><span className="font-weight-bold">{this.formatPrice(withdrawal.amount)}</span></Col>
+                <Col className="col-3 lead"><span className="font-weight-bold">{this.state.priorities[withdrawal.partialHash]}</span></Col>
                 <Col className="col-2 lead text-right"><span className={"font-weight-bold " + (withdrawal.isValid ? "text-success" : "text-danger")}>{withdrawal.isValid ? "Valid" : "Invalid"}</span></Col>
               </Row>
             </Container>
