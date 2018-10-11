@@ -53,6 +53,7 @@ class App extends Component {
           this.setMetaMaskAccount();
         });
         this.setMetaMaskAccount();
+        this.setState({ metamaskWarningOpen: false });
       }
     });
 
