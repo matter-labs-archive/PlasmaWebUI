@@ -161,8 +161,6 @@ class Transactions extends Component {
         const withdrawCollateral = await self.props.plasmaContract.methods.WithdrawCollateral().call();
 
         await self.props.plasmaContract.methods.startExit(self.state.withdrawUTXO.blockNumber, self.state.withdrawUTXO.outputNumber, ethUtil.bufferToHex(proof.tx.serialize()), ethUtil.bufferToHex(proof.proof)).send({ value: withdrawCollateral }).on('transactionHash', async function (hash) {
-          console.log('hash');
-          console.log(`https://rinkeby.etherscan.io/tx/${hash}`);
           self.setState({ withdrawModalOpen: false });
           console.log('Success!');
           await sleep(2000);
@@ -428,6 +426,7 @@ class Transactions extends Component {
             </ButtonDropdown>
           </Col>
         </Row>
+        <p hidden={this.state.utxos.length !== 0} className="lead mx-3 my-4 text-muted text-center">No Records</p>            
         {this.state.utxos.map(function (utxo) {
           return <Container className="tx p-3 shadow">
             <Row className="align-items-center">
@@ -436,7 +435,7 @@ class Transactions extends Component {
               <Col className="col-auto">
                 <Button color="success" className="mr-2" onClick={() => this.openTransferModal(utxo)} title="Transfer"><FontAwesomeIcon icon="arrow-right" /> <span className="d-none d-sm-inline">Transfer</span></Button>          
                 <ButtonDropdown isOpen={this.state.mergeUTXO === utxo} toggle={() => this.toggleMerge(utxo)} className="mr-2" title="Merge With...">
-                  <DropdownToggle color="info" caret>
+                  <DropdownToggle color="info" caret outline={this.state.utxos.length === 1} disabled={this.state.utxos.length === 1}>
                     <FontAwesomeIcon icon="sitemap" rotation={90} /> <span className="d-none d-md-inline">Merge With&hellip;</span>
                   </DropdownToggle>
                   <DropdownMenu className="wideMenu">

@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faSignInAlt, faSignOutAlt, faSortAmountDown, faSitemap, faArrowRight, faExternalLinkAlt } from '@fortawesome/free-solid-svg-icons'
+import { faSignInAlt, faSignOutAlt, faSortAmountDown, faSitemap, faArrowRight, faExternalLinkAlt, faClock } from '@fortawesome/free-solid-svg-icons'
 import { faEthereum } from '@fortawesome/free-brands-svg-icons'
 import { Container, Nav, Alert, Button, Col, Modal, ModalHeader, ModalBody, ModalFooter, Form, FormGroup, Label, Input } from 'reactstrap';
 import Web3 from 'web3';
@@ -11,7 +11,7 @@ import History from './History';
 import logo from './logo.svg';
 import './App.css';
 
-library.add(faEthereum, faSignInAlt, faSignOutAlt, faSortAmountDown, faSitemap, faArrowRight, faExternalLinkAlt);
+library.add(faEthereum, faSignInAlt, faSignOutAlt, faSortAmountDown, faSitemap, faArrowRight, faExternalLinkAlt, faClock);
 
 class App extends Component {
   constructor(props) {
@@ -46,14 +46,13 @@ class App extends Component {
     this.onDepositSubmit = this.onDepositSubmit.bind(this);
 
     this.state.web3js.eth.net.getNetworkType().then((networkName) => {
-      if (networkName !== 'rinkeby') {
+      if (networkName !== process.env.REACT_APP_NETWORK_NAME.toLowerCase()) {
         this.setState({ metamaskWarningOpen: true });
       } else {
         window.web3.currentProvider.publicConfigStore.on('update', () => {
           this.setMetaMaskAccount();
         });
         this.setMetaMaskAccount();
-        this.setState({ metamaskWarningOpen: false });
       }
     });
 
@@ -83,7 +82,7 @@ class App extends Component {
 
     let accounts = await this.state.web3js.eth.getAccounts();
     if (accounts.length === 0) {
-      this.setState({ metamaskWarningOpen: true });
+      this.setState({ account: null, metamaskWarningOpen: true });
       return;
     }
 
@@ -94,7 +93,7 @@ class App extends Component {
       contract.options.from = account;
 
       let balance = await this.state.web3js.eth.getBalance(account);
-      self.setState({ account: accounts[0], contract: contract, ethBalance: balance });
+      self.setState({ account: accounts[0], contract: contract, ethBalance: balance, metamaskWarningOpen: false });
     }
   }
 
@@ -163,7 +162,7 @@ class App extends Component {
             </Form>
           </Modal>
           <Alert color="info" isOpen={this.state.metamaskWarningOpen} toggle={this.onDismissMetamaskInfo}>
-            Please unlock MetaMask account and select Rinkeby test network
+            Please unlock MetaMask account and select {process.env.REACT_APP_NETWORK_NAME} network
           </Alert>
           <Transactions web3js={this.state.web3js} plasmaContract={this.state.plasmaContract} account={this.state.account} onBalanceChanged={this.onPlasmaBalanceChanged} />
           <History web3js={this.state.web3js} plasmaContract={this.state.plasmaContract} priorityQueueContract={this.state.priorityQueueContract} account={this.state.account} />

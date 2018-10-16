@@ -12,7 +12,8 @@ class History extends Component {
       filter: 'deposits',
       sortDropdownOpen: false,
       deposits: [],
-      withdrawals: [],
+      pendingWithdrawals: [],
+      completedWithdrawals: [],
       priorities: {},
     };
 
@@ -123,7 +124,17 @@ class History extends Component {
         return withdrawal;
       }));
 
-      this.setState({ withdrawals: withdrawals, recordToWithdrawalMap: recordToWithdrawalMap });
+      let pendingWithdrawals = [];
+      let completedWithdrawals = [];
+
+      withdrawals.map(function (withdrawal) {
+        if (withdrawal.transactionRef != '0x0000000000000000000000000000000000000000000000000000000000000000')
+          pendingWithdrawals.push(withdrawal);
+        else
+          completedWithdrawals.push(withdrawal);
+      });
+
+      this.setState({ pendingWithdrawals: pendingWithdrawals, completedWithdrawals: completedWithdrawals, recordToWithdrawalMap: recordToWithdrawalMap });
     }
   }
 
@@ -163,8 +174,9 @@ class History extends Component {
           </Col>
           <Col className="text-center mt-1 mb-3 mt-md-0 mb-md-0">
             <ButtonGroup>
-              <Button color="secondary" onClick={() => this.setFilter('deposits')} outline={this.state.filter !== 'deposits'}><FontAwesomeIcon icon="sign-in-alt" /> Deposits</Button>
-              <Button color="secondary" onClick={() => this.setFilter('withdrawals')} outline={this.state.filter !== 'withdrawals'}><FontAwesomeIcon icon="sign-out-alt" /> <span className="d-none d-sm-inline">Pending </span>Withdrawals</Button>
+              <Button color="secondary" onClick={() => this.setFilter('deposits')} outline={this.state.filter !== 'deposits'} title="Deposits"><FontAwesomeIcon icon="sign-in-alt" /> Deposits</Button>
+              <Button color="secondary" onClick={() => this.setFilter('pendingWithdrawals')} outline={this.state.filter !== 'pendingWithdrawals'} title="Pending Withdrawals"><FontAwesomeIcon icon="clock" /> Pending<span className="d-none d-sm-inline"> Withdrawals</span></Button>
+              <Button color="secondary" onClick={() => this.setFilter('completedWithdrawals')} outline={this.state.filter !== 'completedWithdrawals'} title="Completed Withdrawals"><FontAwesomeIcon icon="sign-out-alt" /> Completed<span className="d-none d-sm-inline"> Withdrawals</span></Button>
             </ButtonGroup>
           </Col>
           <Col className="text-right">
@@ -179,45 +191,68 @@ class History extends Component {
           </Col>
         </Row>
         <div hidden={this.state.filter !== 'deposits'}>
-          <Container className="border-bottom p-3">
-            <Row className="align-items-center text-muted mt-3">
-              <Col className="col-4 lead">Amount</Col>
-              <Col className="col-6 lead">Status</Col>
-              <Col className="col-2 lead text-right"></Col>
-            </Row>
-          </Container>
-          {this.state.deposits.map(function (deposit) {
-            return <Container className="tx p-3">
-              <Row className="align-items-center">
-                <Col className="col-4 lead"><span className="font-weight-bold">{this.formatPrice(deposit.amount)}</span></Col>
-                <Col className="col-6 lead"><span className="font-weight-bold">{this.formatDepositStatus(deposit.status)}</span></Col>
-                <Col className="col-2 text-right">
-                  <a className="btn btn-info" href={"https://rinkeby.etherscan.io/address/" + deposit.from} target="_blank"><FontAwesomeIcon icon="external-link-alt" /></a>
-                </Col>
+          <p hidden={this.state.deposits.length !== 0} className="lead mx-3 my-4 text-muted text-center">No Records</p>
+          <div hidden={this.state.deposits.length === 0}>
+            <Container className="border-bottom p-3">
+              <Row className="align-items-center text-muted mt-3">
+                <Col className="col-4 lead">Amount</Col>
+                <Col className="col-6 lead">Status</Col>
+                <Col className="col-2 lead text-right"></Col>
               </Row>
             </Container>
-          }, this)}
+            {this.state.deposits.map(function (deposit) {
+              return <Container className="tx p-3">
+                <Row className="align-items-center">
+                  <Col className="col-4 lead"><span className="font-weight-bold">{this.formatPrice(deposit.amount)}</span></Col>
+                  <Col className="col-6 lead"><span className="font-weight-bold">{this.formatDepositStatus(deposit.status)}</span></Col>
+                  <Col className="col-2 text-right">
+                    <a className="btn btn-info" href={(process.env.REACT_APP_NETWORK_NAME !== "Main") ? ("https://" + process.env.REACT_APP_NETWORK_NAME.toLowerCase() + ".etherscan.io/address/" + deposit.from) : ("https://etherscan.io/address/" + deposit.from)} target="_blank"><FontAwesomeIcon icon="external-link-alt" /></a>
+                  </Col>
+                </Row>
+              </Container>
+            }, this)}
+          </div>
         </div>
-        <div hidden={this.state.filter !== 'withdrawals'}>
-          <Container className="border-bottom p-3">
-            <Row className="align-items-center text-muted mt-3">
-              <Col className="col-4 lead">Date</Col>
-              <Col className="col-3 lead">Amount</Col>
-              <Col className="col-3 lead">Priority</Col>
-              <Col className="col-2 lead text-right">Status</Col>
-            </Row>
-          </Container>
-          {this.state.withdrawals.map(function (withdrawal) {
-            return <Container className="tx p-3">
-              <Row className="align-items-center">
-                <Col className="col-4 lead">{this.formatTime(withdrawal.timePublished)}</Col>
-                <Col className="col-3 lead"><span className="font-weight-bold">{this.formatPrice(withdrawal.amount)}</span></Col>
-                <Col className="col-3 lead"><span className="font-weight-bold">{this.state.priorities[withdrawal.partialHash]}</span></Col>
-                <Col className="col-2 lead text-right"><span className={"font-weight-bold " + (withdrawal.isValid ? "text-success" : "text-danger")}>{withdrawal.isValid ? "Valid" : "Invalid"}</span></Col>
+        <div hidden={this.state.filter !== 'pendingWithdrawals'}>
+          <p hidden={this.state.pendingWithdrawals.length !== 0} className="lead mx-3 my-4 text-muted text-center">No Records</p>
+          <div hidden={this.state.pendingWithdrawals.length === 0}>
+            <Container className="border-bottom p-3">
+              <Row className="align-items-center text-muted mt-3">
+                <Col className="col-4 lead">Date</Col>
+                <Col className="col-3 lead">Amount</Col>
+                <Col className="col-3 lead">Priority</Col>
+                <Col className="col-2 lead text-right">Status</Col>
               </Row>
             </Container>
-          }, this)}
-          <p className="lead mx-3 mt-4 text-muted">First item in the queue has the priority {this.state.minPriority} and will exit by {this.formatTime(this.state.estimation)}</p>
+            {this.state.pendingWithdrawals.map(function (withdrawal) {
+              return <Container className="tx p-3">
+                <Row className="align-items-center">
+                  <Col className="col-4 lead">{this.formatTime(withdrawal.timePublished)}</Col>
+                  <Col className="col-3 lead"><span className="font-weight-bold">{this.formatPrice(withdrawal.amount)}</span></Col>
+                  <Col className="col-3 lead"><span className="font-weight-bold">{this.state.priorities[withdrawal.partialHash]}</span></Col>
+                  <Col className="col-2 lead text-right"><span className={"font-weight-bold " + (withdrawal.isValid ? "text-success" : "text-danger")}>{withdrawal.isValid ? "Valid" : "Invalid"}</span></Col>
+                </Row>
+              </Container>
+            }, this)}
+            <p className="lead mx-3 mt-4 text-muted">First item in the queue has the priority {this.state.minPriority} and will exit by {this.formatTime(this.state.estimation)}</p>
+          </div>
+        </div>
+        <div hidden={this.state.filter !== 'completedWithdrawals'}>
+          <p hidden={this.state.completedWithdrawals.length !== 0} className="lead mx-3 my-4 text-muted text-center">No Records</p>
+          <div hidden={this.state.completedWithdrawals.length === 0}>
+            <Container className="border-bottom p-3">
+              <Row className="align-items-center text-muted mt-3">
+                <Col className="col-12 lead text-center">Status</Col>
+              </Row>
+            </Container>
+            {this.state.completedWithdrawals.map(function (withdrawal) {
+              return <Container className="tx p-3">
+                <Row className="align-items-center">
+                  <Col className="col-12 lead text-center"><span className={"font-weight-bold " + (withdrawal.isValid ? "text-success" : "text-danger")}>{withdrawal.isValid ? "Valid" : "Invalid"}</span></Col>
+                </Row>
+              </Container>
+            }, this)}
+          </div>
         </div>
       </div>
     );
