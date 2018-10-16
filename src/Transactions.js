@@ -108,7 +108,7 @@ class Transactions extends Component {
     let amount = parseFloat(this.state.transferAmount);
 
     if (amount > 0) {
-      let weiAmount = this.props.web3js.utils.toWei((Math.floor(amount * 1000)).toString(), 'finney');
+      let weiAmount = this.props.web3js.utils.toWei((Math.floor(amount * 1000000.0)).toString(), 'szabo');
 
       try {
         await this.transfer(this.state.transferUTXO, this.props.account, this.state.transferAddressTo, weiAmount);
