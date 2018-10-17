@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { Container, Row, Col, Button, ButtonGroup, ButtonDropdown, DropdownToggle, DropdownMenu, DropdownItem } from 'reactstrap';
+import { Container, Row, Col, Button, ButtonGroup, ButtonDropdown, DropdownToggle, DropdownMenu, DropdownItem, Badge } from 'reactstrap';
 import { BN } from 'bn.js';
 import './History.css';
 
@@ -174,9 +174,9 @@ class History extends Component {
           </Col>
           <Col className="text-center mt-1 mb-3 mt-md-0 mb-md-0">
             <ButtonGroup>
-              <Button color="secondary" onClick={() => this.setFilter('deposits')} outline={this.state.filter !== 'deposits'} title="Deposits"><FontAwesomeIcon icon="sign-in-alt" /> Deposits</Button>
-              <Button color="secondary" onClick={() => this.setFilter('pendingWithdrawals')} outline={this.state.filter !== 'pendingWithdrawals'} title="Pending Withdrawals"><FontAwesomeIcon icon="clock" /> Pending<span className="d-none d-sm-inline"> Withdrawals</span></Button>
-              <Button color="secondary" onClick={() => this.setFilter('completedWithdrawals')} outline={this.state.filter !== 'completedWithdrawals'} title="Completed Withdrawals"><FontAwesomeIcon icon="sign-out-alt" /> Completed<span className="d-none d-sm-inline"> Withdrawals</span></Button>
+              <Button color="secondary" onClick={() => this.setFilter('deposits')} outline={this.state.filter !== 'deposits'} title="Deposits"><FontAwesomeIcon icon="sign-in-alt" /> Deposits<Badge pill className="ml-2" color="primary" hidden={this.state.deposits.length === 0}>{this.state.deposits.length}</Badge></Button>
+              <Button color="secondary" onClick={() => this.setFilter('pendingWithdrawals')} outline={this.state.filter !== 'pendingWithdrawals'} title="Pending Withdrawals"><FontAwesomeIcon icon="clock" /> Pending<span className="d-none d-sm-inline"> Withdrawals</span><Badge pill className="ml-2" color="primary" hidden={this.state.pendingWithdrawals.length === 0}>{this.state.pendingWithdrawals.length}</Badge></Button>
+              <Button color="secondary" onClick={() => this.setFilter('completedWithdrawals')} outline={this.state.filter !== 'completedWithdrawals'} title="Completed Withdrawals"><FontAwesomeIcon icon="sign-out-alt" /> Completed<span className="d-none d-sm-inline"> Withdrawals</span><Badge pill className="ml-2" color="primary" hidden={this.state.completedWithdrawals.length === 0}>{this.state.completedWithdrawals.length}</Badge></Button>
             </ButtonGroup>
           </Col>
           <Col className="text-right">
