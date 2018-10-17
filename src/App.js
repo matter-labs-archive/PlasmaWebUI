@@ -59,6 +59,7 @@ class App extends Component {
     const plasmaContractAddress = process.env.REACT_APP_PLASMA_CONTRACT_ADDRESS;
     const plasmaContractAbi = JSON.parse(process.env.REACT_APP_PLASMA_CONTRACT_ABI);
     this.state.plasmaContract = new this.state.web3js.eth.Contract(plasmaContractAbi, plasmaContractAddress, { gas: 1000000 });
+    
     this.setPriorityQueueContract();
   }
 
@@ -74,7 +75,9 @@ class App extends Component {
     const priorityQueueContractAddress = await this.state.plasmaContract.methods.exitQueue().call();
     const priorityQueueContractAbi = JSON.parse(process.env.REACT_APP_PRIORITY_QUEUE_CONTRACT_ABI);
     const priorityQueueContract = new this.state.web3js.eth.Contract(priorityQueueContractAbi, priorityQueueContractAddress, { gas: 1000000 });
-    this.setState({ priorityQueueContract: priorityQueueContract });
+    const plasmaBlockNumber = await this.state.plasmaContract.methods.lastBlockNumber().call();
+
+    this.setState({ priorityQueueContract: priorityQueueContract, plasmaBlockNumber: plasmaBlockNumber.toString() });
   }
 
   async setMetaMaskAccount() {
@@ -140,6 +143,7 @@ class App extends Component {
             <span className="p-2 mr-3 text-light d-none d-md-inline-block text-truncate">Address: <strong>{this.state.account}</strong></span>
             <span className="p-2 mr-3 text-light">ETH Balance: <strong>{this.formatPrice(this.state.ethBalance)}</strong> <FontAwesomeIcon icon={["fab", "ethereum"]} /></span>
             <span className="p-2 mr-4 text-light">Plasma Balance: <strong>{this.formatPrice(this.state.plasmaBalance)}</strong> <FontAwesomeIcon icon={["fab", "ethereum"]} /></span>
+            <span className="p-2 mr-4 text-light d-none d-xl-inline-block" title="Current Plasma Block">Block: <strong>{this.state.plasmaBlockNumber}</strong></span>
           </Nav>
           <Button color="primary" onClick={this.toggleDepositModal}><FontAwesomeIcon icon="sign-in-alt" /> Deposit in <FontAwesomeIcon icon={["fab", "ethereum"]} /></Button>
         </div>
