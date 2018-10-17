@@ -481,7 +481,7 @@ class Transactions extends Component {
           <Form onSubmit={this.onWithdrawSubmit}>
             <ModalHeader toggle={this.toggleWithdrawModal}>Start Withdraw</ModalHeader>
             <ModalBody>
-              <p className="lead">You are about to initiate withdrawal process. It will take 2 week period.</p>
+              <p className="lead">You are about to initiate withdrawal process. It will take 2 weeks period.</p>
             </ModalBody>
             <ModalFooter>
               <Button color="success" type="submit" className="mr-2"><FontAwesomeIcon icon="arrow-right" /> <span className="d-none d-sm-inline">Start Withdraw</span></Button>
