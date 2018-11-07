@@ -36,7 +36,7 @@ class App extends Component {
       metamaskWarningOpen: false,
       depositModalOpen: false,
       depositAmount: '',
-      web3js: new Web3(window.web3.currentProvider),
+      web3js: new Web3(window.ethereum || window.web3.currentProvider),
     };
 
     this.onDismissMetamaskInfo = this.onDismissMetamaskInfo.bind(this);
@@ -49,10 +49,12 @@ class App extends Component {
       if (networkName !== process.env.REACT_APP_NETWORK_NAME.toLowerCase()) {
         this.setState({ metamaskWarningOpen: true });
       } else {
-        window.web3.currentProvider.publicConfigStore.on('update', () => {
+        if (window.ethereum && window.ethereum.publicConfigStore) {
+          window.ethereum.publicConfigStore.on('update', () => {
+            this.setMetaMaskAccount();
+          });
           this.setMetaMaskAccount();
-        });
-        this.setMetaMaskAccount();
+        }
       }
     });
 

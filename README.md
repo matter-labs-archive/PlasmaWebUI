@@ -2,10 +2,8 @@
 This project contains React based web app that demonstrates basic interaction with matter plasma. 
 To use that sample you must have metamask installed.
 
-That repo uses https://github.com/matterinc/PlasmaTransactionJS as a dependency so you need to clone it with `--recursive` flag
-
 ### To launch do the following:
-- Clone repo with submodules `git clone --recursive https://github.com/matterinc/PlasmaWebUI.git`
+- Clone repo with submodules `git clone https://github.com/matterinc/PlasmaWebUI.git`
 - `npm i`
 - Copy  `.env` file to untracked version `.env.local` and edit it:
 ```
@@ -26,6 +24,3 @@ REACT_APP_PLASMA_CONTRACT_ADDRESS="0x1effBc5DBE9f0daAB73C08e3A00cf105B29C547B"
 - `npm start`
 
 Note: don't forget to unlock your metamask and chose appropriate network
-
-### To update submodules
-- `./update.sh`

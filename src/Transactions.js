@@ -1,11 +1,7 @@
 import React, { Component } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Container, Row, Col, Button, ButtonDropdown, DropdownToggle, DropdownMenu, DropdownItem, Badge, Modal, ModalHeader, ModalBody, ModalFooter, Form, FormGroup, Label, Input } from 'reactstrap';
-import { PlasmaTransactionWithSignature } from './plasma-tx-js/Tx/RLPtxWithSignature';
-import { PlasmaTransaction, TxTypeSplit, TxTypeMerge } from './plasma-tx-js/Tx/RLPtx';
-import { TransactionInput } from './plasma-tx-js/Tx/RLPinput';
-import { TransactionOutput } from './plasma-tx-js/Tx/RLPoutput';
-import { Block } from './plasma-tx-js/Block/RLPblock';
+import { PlasmaTransaction, PlasmaTransactionWithSignature, TxTypeSplit, TxTypeMerge, TransactionInput, TransactionOutput, Block } from '@thematter_io/plasma.js';
 import { BN } from 'bn.js';
 import * as ethUtil from 'ethereumjs-util';
 import './Transactions.css';

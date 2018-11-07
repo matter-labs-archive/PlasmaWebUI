@@ -1,3 +1,0 @@
-[submodule "src/plasma-tx-js"]
-	path = src/plasma-tx-js
-	url = https://github.com/matterinc/PlasmaTransactionJS.git
