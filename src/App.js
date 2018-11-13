@@ -45,18 +45,20 @@ class App extends Component {
     this.handleAmountChange = this.handleAmountChange.bind(this);
     this.onDepositSubmit = this.onDepositSubmit.bind(this);
 
-    this.state.web3js.eth.net.getNetworkType().then((networkName) => {
-      if (networkName !== process.env.REACT_APP_NETWORK_NAME.toLowerCase()) {
-        this.setState({ metamaskWarningOpen: true });
-      } else {
-        if (window.ethereum && window.ethereum.publicConfigStore) {
-          window.ethereum.publicConfigStore.on('update', () => {
+    if (window.web3 && window.web3.currentProvider && !window.web3.currentProvider.isTrust) {
+      this.state.web3js.eth.net.getNetworkType().then((networkName) => {
+        if (networkName !== process.env.REACT_APP_NETWORK_NAME.toLowerCase()) {
+          this.setState({ metamaskWarningOpen: true });
+        } else {
+          if (window.ethereum && window.ethereum.publicConfigStore) {
+            window.ethereum.publicConfigStore.on('update', () => {
+              this.setMetaMaskAccount();
+            });
             this.setMetaMaskAccount();
-          });
-          this.setMetaMaskAccount();
+          }
         }
-      }
-    });
+      });
+    }
 
     const plasmaContractAddress = process.env.REACT_APP_PLASMA_CONTRACT_ADDRESS;
     const plasmaContractAbi = JSON.parse(process.env.REACT_APP_PLASMA_CONTRACT_ABI);
