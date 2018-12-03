@@ -35,7 +35,7 @@ class Transactions extends Component {
     this.onWithdrawSubmit = this.onWithdrawSubmit.bind(this);
 
     var self = this;
-    setInterval(() => { self.loadTransactions(self.props.account); }, 2000);
+    setInterval(() => { self.loadTransactions(self.props.account); }, 5000);
   }
 
   componentDidUpdate(prevProps) {
@@ -113,9 +113,6 @@ class Transactions extends Component {
         await this.transfer(this.state.transferUTXO, this.props.account, this.state.transferAddressTo, weiAmount);
         self.setState({ transferModalOpen: false });
         console.log('Success!');
-        // await this.loadTransactions(this.props.account);
-        // await sleep(5000);
-        // await this.loadTransactions(this.props.account);
       } catch(err) {
         console.log('Error:', err);
       };
@@ -162,8 +159,6 @@ class Transactions extends Component {
         await self.props.plasmaContract.methods.startExit(self.state.withdrawUTXO.blockNumber, self.state.withdrawUTXO.outputNumber, ethUtil.bufferToHex(proof.tx.serialize()), ethUtil.bufferToHex(proof.proof)).send({ value: withdrawCollateral }).on('transactionHash', async function (hash) {
           self.setState({ withdrawModalOpen: false });
           console.log('Success!');
-          // await sleep(2000);
-          // await self.loadTransactions(self.props.account);
         });
       });
       reader.readAsArrayBuffer(blockBlob);
@@ -204,11 +199,11 @@ class Transactions extends Component {
         let data = await response.json();
 
         if (data.utxos.length > 0 && data.utxos.length != self.state.utxos.length) {
-          //console.log("->", data.utxos.length);
+          console.log("->", data.utxos.length);
           self.setState({ utxos: data.utxos });
         }
         else {
-          //console.log("skipping:", data.utxos.length);
+          console.log("skipping:", data.utxos.length);
         }
 
         let balance = new BN();
@@ -317,10 +312,6 @@ class Transactions extends Component {
         if (data.error) {
           throw data.reason;
         } else {
-          // await sleep(500);
-          // await self.loadTransactions(self.props.account);
-          // await sleep(60000);
-          // await self.loadTransactions(self.props.account);
           return;
         }
       });
@@ -402,10 +393,6 @@ class Transactions extends Component {
         if (data.error) {
           throw data.reason;
         } else {
-          // await sleep(500);
-          // await self.loadTransactions(self.props.account);
-          // await sleep(60000);
-          // await self.loadTransactions(self.props.account);
           return;
         }
       });

@@ -64,6 +64,12 @@ class App extends Component {
     const plasmaContractAbi = JSON.parse(process.env.REACT_APP_PLASMA_CONTRACT_ABI);
     this.state.plasmaContract = new this.state.web3js.eth.Contract(plasmaContractAbi, plasmaContractAddress, { gas: 1000000 });
     
+    // var event = this.state.plasmaContract.DepositEvent({fromBlock: 0});
+    // event.watch(function (error, result) {
+    //  if (!error)
+    //    console.log(result);
+    // });
+    
     this.setPriorityQueueContract();
   }
 
@@ -123,10 +129,24 @@ class App extends Component {
       
       console.log('Depositing...');
 
-      this.state.plasmaContract.methods.deposit().send({ value: weiAmount }).on('transactionHash', function (hash) {
+      this.state.plasmaContract.methods.deposit().send({ value: weiAmount })
+      .on('transactionHash', function (hash) {
         self.setState({ depositModalOpen: false });
         console.log(`https://rinkeby.etherscan.io/tx/${hash}`);
       });
+
+      // .on('transactionHash', function (hash) {
+      //   self.setState({ depositModalOpen: false });
+      //   console.log(`https://rinkeby.etherscan.io/tx/${hash}`);
+      // }).on('receipt', function (receipt) {
+      //   console.log('1');
+      //   console.log('receipt:', receipt);
+      // }).on('confirmation', function (confirmationNumber, receipt) {
+      //   console.log('2');
+      //   console.log('confirmation:', confirmationNumber, receipt);
+      // }).on('error', function (err) {
+      //   console.error(err);
+      // });
     }
   }
 

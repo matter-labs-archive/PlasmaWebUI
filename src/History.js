@@ -19,6 +19,27 @@ class History extends Component {
 
     this.setFilter = this.setFilter.bind(this);
     this.toggleSort = this.toggleSort.bind(this);
+    
+    // this.props.web3js.eth.subscribe('newBlockHeaders', function (err, newBlockHeader) {
+    //   if (err === null) {
+    //     console.log(newBlockHeader);
+    //   }
+    // });
+
+    this.props.plasmaContract.events.DepositEvent({
+      // filter: {_depositIndex: [20,23], myOtherIndexedParam: '0x123456789...'}, // Using an array means OR: e.g. 20 or 23
+      fromBlock: 0
+    }, function (error, event) {
+      console.log('event:': event, ', error:', error);
+    })
+    .on('data', function (event){
+      console.log('data:': event); // same results as the optional callback above
+    })
+    .on('changed', function (event) {
+      console.log('changed:': event);
+      // remove event from local database
+    })
+    .on('error', console.error);
   }
 
   componentDidUpdate(prevProps) {
